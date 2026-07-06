@@ -85,8 +85,8 @@ export function SettingsModal() {
           </div>
         ) : (
           <p style={{ margin: 0, fontSize: '13px', color: C.muted, fontWeight: 500, lineHeight: 1.5 }}>
-            La sincronización en la nube no está configurada. Para activarla, define <b>VITE_SUPABASE_URL</b> y{' '}
-            <b>VITE_SUPABASE_ANON_KEY</b> al construir la app (ver <b>DEPLOY.md</b>). Mientras tanto, tus datos viven en
+            La sincronización en la nube no está configurada. Para activarla, define <b>VITE_SYNC_ID</b> (en el sitio) y{' '}
+            <b>DATABASE_URL</b> de Neon (en el servidor de Vercel) — ver <b>DEPLOY.md</b>. Mientras tanto, tus datos viven en
             este navegador; usa <b>Exportar copia</b> para respaldarlos.
           </p>
         ),
