@@ -22,7 +22,7 @@ export function Pomodoro({ s }: { s: Stats }) {
   const C = useC()
   const narrow = useStore((st) => st.narrow)
   const d = useStore((st) => st.data)
-  const run = useStore((st) => st.pomoRun)
+  const run = d.pomoRun
   useStore((st) => st.tick) // re-render each timer tick
   const setMode = useStore((st) => st.setPomoMode)
   const setPomoTask = useStore((st) => st.setPomoTask)

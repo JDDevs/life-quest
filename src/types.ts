@@ -79,6 +79,18 @@ export interface PomoSession {
   mode: 'pomo' | 'stopwatch'
 }
 
+// Running timer state. Time-based (anchorTs + baseSec) so any device can
+// reconstruct the exact remaining/elapsed time — and so it can be synced.
+export interface PomoRun {
+  running: boolean
+  mode: 'pomo' | 'stopwatch'
+  phase: 'work' | 'break'
+  cycle: number
+  taskId: string | null
+  anchorTs: number | null
+  baseSec: number
+}
+
 export interface Reward {
   id: string
   name: string
@@ -184,6 +196,7 @@ export interface AppData {
   tasks: Task[]
   pomoSettings: PomoSettings
   pomoSessions: PomoSession[]
+  pomoRun: PomoRun
 }
 
 export interface LevelInfo {
