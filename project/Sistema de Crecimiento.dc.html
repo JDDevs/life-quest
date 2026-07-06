@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0..1&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{font-family:'Manrope',system-ui,-apple-system,sans-serif;background:#F4F4F9;color:#1E1B2E;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    button{font-family:inherit;cursor:pointer;border:none;background:none}
+    input,textarea,select{font-family:inherit;color:inherit}
+    textarea{resize:vertical}
+    ::-webkit-scrollbar{height:9px;width:9px}
+    ::-webkit-scrollbar-thumb{background:#d7d7e6;border-radius:9px}
+    ::-webkit-scrollbar-track{background:transparent}
+    @keyframes fxfall{0%{transform:translateY(-12px) rotate(0);opacity:1}100%{transform:translateY(72vh) rotate(760deg);opacity:0}}
+    @keyframes fxfloat{0%{transform:translate(-50%,0) scale(.8);opacity:0}18%{opacity:1;transform:translate(-50%,-8px) scale(1.05)}100%{transform:translate(-50%,-86px) scale(1);opacity:0}}
+    @keyframes popin{0%{transform:scale(.72);opacity:0}62%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    @keyframes ringpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+    @keyframes lvlup{0%{transform:scale(.4) rotate(-10deg);opacity:0}42%{opacity:1}62%{transform:scale(1.12) rotate(5deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+    @keyframes slidein{0%{transform:translateY(14px);opacity:0}100%{transform:translateY(0);opacity:1}}
+    @keyframes fadein{0%{opacity:0}100%{opacity:1}}
+    @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  </style>
+</helmet>
+<div style="min-height:100vh">{{ app }}</div>
+<div id="fxLayer" style="position:fixed;inset:0;pointer-events:none;z-index:99999;overflow:hidden"></div>
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="tg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6D5AE6"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>
+    <rect x="0" y="0" width="100" height="100" rx="22" fill="url(#tg)"/>
+    <text x="50" y="50" font-family="Space Grotesk, sans-serif" font-size="30" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="central">MC</text>
+    <circle cx="50" cy="74" r="4" fill="#FFC64B"/>
+  </svg>
+</template>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  h = (t, p, ...c) => React.createElement(t, p, ...c);
+
+  KEY = 'gce_state_v2';
+
+  LIGHT = {
+    bg:'#F4F4F9', card:'#FFFFFF', card2:'#FBFBFE', line:'#ECECF3', line2:'#E0E0EC',
+    text:'#211D33', muted:'#8A87A0', faint:'#B7B5C7',
+    primary:'#6D5AE6', primaryD:'#5A46CC', primarySoft:'#EEEAFF', primaryGlow:'rgba(109,90,230,.28)',
+    gold:'#E9990A', goldSoft:'#FBEFD4', goldText:'#8A5A00',
+    green:'#1DA574', greenSoft:'#DFF4EC', greenText:'#0F7F58',
+    blue:'#3B82F6', blueSoft:'#E4EEFF',
+    danger:'#E14748', dangerSoft:'#FBE6E6'
+  };
+  DARK = {
+    bg:'#131019', card:'#1C1927', card2:'#232030', line:'#2B2839', line2:'#39354C',
+    text:'#ECEAF6', muted:'#9E9BB4', faint:'#6C6883',
+    primary:'#8B7BF0', primaryD:'#A899F7', primarySoft:'#2A2545', primaryGlow:'rgba(139,123,240,.4)',
+    gold:'#F2B23D', goldSoft:'#33280F', goldText:'#F3C869',
+    green:'#2FC08C', greenSoft:'#15302A', greenText:'#4FD3A0',
+    blue:'#5B94F7', blueSoft:'#1B2740',
+    danger:'#F0696A', dangerSoft:'#3A1F22'
+  };
+  get C(){ return (this.state && this.state.data && this.state.data.theme==='dark') ? this.DARK : this.LIGHT; }
+  applyTheme(){ try{ const C=this.C; document.body.style.background=C.bg; document.body.style.color=C.text; document.body.style.transition='background .3s ease,color .3s ease'; }catch(e){} }
+  componentDidMount(){ this.applyTheme(); this._rz=()=>{ const n=window.innerWidth<760; if(n!==this.state.narrow) this.setState({narrow:n}); }; window.addEventListener('resize',this._rz); this._rz(); }
+  componentWillUnmount(){ if(this._rz) window.removeEventListener('resize',this._rz); }
+  componentDidUpdate(){ this.applyTheme(); }
+  col2(wide){ return this.state.narrow?'1fr':wide; }
+  toggleTheme(){ const d=this.state.data; d.theme = d.theme==='dark'?'light':'dark'; this.setState({t:Date.now()}); this.persist(); }
+
+  AREAS = [
+    { id:'esp', name:'Espiritual',            color:'#7C5CFF', icon:'self_improvement' },
+    { id:'lab', name:'Laboral',               color:'#3B82F6', icon:'work' },
+    { id:'sal', name:'Salud',                 color:'#1DA574', icon:'ecg_heart' },
+    { id:'cre', name:'Crecimiento personal',  color:'#E9990A', icon:'trending_up' },
+    { id:'dom', name:'Dominio propio',        color:'#EC4899', icon:'bolt' },
+    { id:'rel', name:'Relaciones',            color:'#FF6B4A', icon:'diversity_3' },
+    { id:'fin', name:'Finanzas',              color:'#14B8A6', icon:'savings' },
+    { id:'hog', name:'Hogar y organización',  color:'#64748B', icon:'home' },
+  ];
+
+  RANKS = [
+    {min:1,name:'Aprendiz'},{min:5,name:'Iniciado'},{min:10,name:'Constante'},
+    {min:16,name:'Disciplinado'},{min:24,name:'Maestro'},{min:34,name:'Leyenda'},{min:50,name:'Ascendido'}
+  ];
+
+  CHESS_PLAN = ['Táctica','Finales','Estrategia','Aperturas','Partidas de maestros','Análisis de errores propios','Revisión y planificación'];
+
+  REVIEW_QS = [
+    { k:'mejor', q:'¿Qué hice mejor esta semana?' },
+    { k:'falle', q:'¿Dónde fallé?' },
+    { k:'aprendi', q:'¿Qué aprendí?' },
+    { k:'dificil', q:'¿Qué hábito fue el más difícil?' },
+    { k:'facil', q:'¿Qué hábito fue el más fácil?' },
+    { k:'ajuste', q:'¿Qué ajustaré la próxima semana?' },
+    { k:'gracias', q:'¿De qué doy gracias a Dios esta semana?' },
+  ];
+
+  DEFAULT_REWARDS = [
+    { id:'r1', name:'Comer un dulce', cost:60, icon:'cake' },
+    { id:'r2', name:'1 hora de videojuegos', cost:140, icon:'sports_esports' },
+    { id:'r3', name:'Ver una película o serie', cost:180, icon:'movie' },
+    { id:'r4', name:'Pedir comida especial', cost:300, icon:'restaurant' },
+    { id:'r5', name:'Comprar un libro', cost:450, icon:'menu_book', minLevel:1 },
+  ];
+
+  DEFAULT_POTIONS = [
+    { id:'p1', name:'Poción menor', heal:25, cost:40, icon:'local_drink' },
+    { id:'p2', name:'Poción mayor', heal:60, cost:90, icon:'science' },
+    { id:'p3', name:'Elíxir completo', heal:9999, cost:200, icon:'auto_awesome' },
+  ];
+
+  DEFAULT_BADHABITS = [
+    { id:'b1', name:'Compra impulsiva', damage:18, icon:'money_off' },
+    { id:'b2', name:'Consumí azúcar en exceso', damage:12, icon:'no_food' },
+    { id:'b3', name:'Trasnoché sin razón', damage:12, icon:'bedtime_off' },
+    { id:'b4', name:'Procrastiné el día', damage:10, icon:'hourglass_disabled' },
+  ];
+
+  TIERS = [
+    { min:1,  name:'Brote',     color:'#7FD18B', accent:'#4FB765' },
+    { min:5,  name:'Retoño',    color:'#63C6E4', accent:'#2FA6C9' },
+    { min:10, name:'Guardián',  color:'#8B7BF0', accent:'#6D5AE6' },
+    { min:16, name:'Centinela', color:'#F0A64E', accent:'#E0891A' },
+    { min:24, name:'Campeón',   color:'#EC6F9E', accent:'#D6457E' },
+    { min:34, name:'Ascendido', color:'#F2C14E', accent:'#DBA517' },
+  ];
+  maxHP(level){ return 100 + (level-1)*20; }
+  tierFor(level){ let t=this.TIERS[0], idx=0; this.TIERS.forEach((x,i)=>{ if(level>=x.min){ t=x; idx=i; } }); return {...t, idx}; }
+
+  ACH = [
+    { id:'first_goal', name:'Primer paso', desc:'Completa tu primera acción', icon:'flag', tgt:s=>1, cur:s=>s.unitsEver, test:s=>s.unitsEver>=1 },
+    { id:'streak_3', name:'Encendiendo', desc:'3 días seguidos activo', icon:'local_fire_department', tgt:s=>3, cur:s=>s.streak, test:s=>s.bestStreak>=3 },
+    { id:'streak_7', name:'Semana de fuego', desc:'7 días seguidos activo', icon:'local_fire_department', tgt:s=>7, cur:s=>s.bestStreak, test:s=>s.bestStreak>=7 },
+    { id:'streak_30', name:'Imparable', desc:'30 días seguidos activo', icon:'whatshot', tgt:s=>30, cur:s=>s.bestStreak, test:s=>s.bestStreak>=30 },
+    { id:'perfect_week', name:'Semana perfecta', desc:'Cumple el 100% de una semana', icon:'verified', tgt:s=>1, cur:s=>s.perfectWeeks, test:s=>s.perfectWeeks>=1 },
+    { id:'level_5', name:'Nivel 5', desc:'Alcanza el nivel 5', icon:'military_tech', tgt:s=>5, cur:s=>s.level, test:s=>s.level>=5 },
+    { id:'level_10', name:'Nivel 10', desc:'Alcanza el nivel 10', icon:'military_tech', tgt:s=>10, cur:s=>s.level, test:s=>s.level>=10 },
+    { id:'level_20', name:'Nivel 20', desc:'Alcanza el nivel 20', icon:'workspace_premium', tgt:s=>20, cur:s=>s.level, test:s=>s.level>=20 },
+    { id:'xp_1000', name:'Mil de XP', desc:'Acumula 1.000 XP ganado', icon:'bolt', tgt:s=>1000, cur:s=>s.earnedXP, test:s=>s.earnedXP>=1000 },
+    { id:'xp_5000', name:'Cinco mil', desc:'Acumula 5.000 XP ganado', icon:'bolt', tgt:s=>5000, cur:s=>s.earnedXP, test:s=>s.earnedXP>=5000 },
+    { id:'first_reward', name:'Date un gusto', desc:'Reclama tu primera recompensa', icon:'redeem', tgt:s=>1, cur:s=>s.rewardsClaimed, test:s=>s.rewardsClaimed>=1 },
+    { id:'reward_10', name:'Bien merecido', desc:'Reclama 10 recompensas', icon:'redeem', tgt:s=>10, cur:s=>s.rewardsClaimed, test:s=>s.rewardsClaimed>=10 },
+    { id:'chess_10', name:'Ajedrecista', desc:'Registra 10 partidas', icon:'chess', tgt:s=>10, cur:s=>s.chessGames, test:s=>s.chessGames>=10 },
+    { id:'chess_100', name:'100 partidas', desc:'Registra 100 partidas', icon:'chess', tgt:s=>100, cur:s=>s.chessGames, test:s=>s.chessGames>=100 },
+    { id:'chess_5h', name:'Estudio profundo', desc:'5 horas de estudio de ajedrez', icon:'timer', tgt:s=>300, cur:s=>s.chessMin, test:s=>s.chessMin>=300 },
+    { id:'reflect_1', name:'Introspección', desc:'Completa tu primera revisión dominical', icon:'auto_stories', tgt:s=>1, cur:s=>s.reflections, test:s=>s.reflections>=1 },
+    { id:'reflect_4', name:'Un mes de reflexión', desc:'Completa 4 revisiones dominicales', icon:'auto_stories', tgt:s=>4, cur:s=>s.reflections, test:s=>s.reflections>=4 },
+    { id:'area_3', name:'Especialista', desc:'Lleva un área al nivel 3', icon:'star', tgt:s=>3, cur:s=>s.maxAreaLvl, test:s=>s.maxAreaLvl>=3 },
+    { id:'allround_2', name:'Equilibrio', desc:'Todas las áreas en nivel 2+', icon:'hub', tgt:s=>8, cur:s=>s.areasAt2, test:s=>s.areasAt2>=8 },
+  ];
+
+  SUGGESTED = [
+    ['esp','Levantarme 5:30 a.m. al menos 5 días','daily',15,5,'main'],
+    ['esp','Escuchar una prédica diaria','daily',8,7,'side'],
+    ['esp','Leer un capítulo de la Biblia cada día','daily',10,7,'main'],
+    ['esp','Memorizar un versículo','weekly',30,1,'side'],
+    ['esp','Orar 10 minutos diarios','daily',10,7,'main'],
+    ['esp','Orar por tres personas cada día','daily',8,7,'side'],
+    ['esp','Ayunar 3 veces','count',40,3,'main'],
+    ['lab','85% de confirmación en la tienda','weekly',50,1,'main'],
+    ['lab','Publicar 3 productos nuevos','count',20,3,'main'],
+    ['lab','No procrastinar al iniciar la jornada','daily',12,5,'main'],
+    ['lab','Completar 1 funcionalidad importante','weekly',60,1,'main'],
+    ['lab','Completar 5 tareas de prioridad media','count',12,5,'side'],
+    ['lab','2 bloques de trabajo profundo (60-90 min)','daily',18,7,'main'],
+    ['sal','Dormir 10 p.m. y levantarme 5 a.m.','daily',12,7,'main'],
+    ['sal','Celular fuera del cuarto desde las 8 p.m.','daily',10,7,'side'],
+    ['sal','30 min de ejercicio 3 veces','count',25,3,'main'],
+    ['sal','2 litros de agua diarios','daily',8,7,'main'],
+    ['sal','No consumir azúcar 3 días','count',20,3,'side'],
+    ['sal','Descanso de 15 min al almuerzo','daily',6,5,'side'],
+    ['sal','10 min de sol cada mañana','daily',8,7,'side'],
+    ['cre','Estudiar un idioma 15 min diarios','daily',12,7,'main'],
+    ['cre','Leer 20 páginas diarias','daily',15,7,'main'],
+    ['cre','Estudiar ajedrez 30 min diarios','daily',15,7,'main'],
+    ['cre','Jugar 3 partidas diarias y analizarlas','daily',12,7,'side'],
+    ['rel','Llamar a un familiar','weekly',20,1,'main'],
+    ['fin','No hacer compras impulsivas','daily',15,7,'main'],
+    ['hog','Barrer el cuarto todos los días','daily',8,7,'side'],
+    ['hog','Limpiar dos habitaciones','count',20,2,'main'],
+  ];
+
+  // ---------- lifecycle ----------
+  constructor(props){
+    super(props);
+    this.state = {
+      data: this.load(),
+      view: 'dash',
+      goalForm: null,
+      rewardForm: null,
+      histWeek: null,
+      chessDraft: { games:'', minutes:'', result:'', notes:'' },
+      settings: false,
+      achForm: null,
+      habitForm: null,
+      shopTab: 'rewards',
+      narrow: (typeof window!=='undefined' && window.innerWidth<760),
+      t: 0
+    };
+  }
+
+  load(){
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (raw) { const d = JSON.parse(raw); return this.migrate(d); }
+    } catch(e){}
+    return this.seed();
+  }
+  seed(){
+    const wk = this.mondayKey(new Date());
+    return {
+      version: 2,
+      createdAt: this.dateKey(new Date()),
+      currentWeek: wk,
+      weekStart: { [wk]: wk },
+      goals: { [wk]: [] },
+      rewards: this.DEFAULT_REWARDS.map(r=>({...r})),
+      potions: this.DEFAULT_POTIONS.map(p=>({...p})),
+      badHabits: this.DEFAULT_BADHABITS.map(b=>({...b})),
+      habitLog: [],
+      hp: null,
+      claims: [],
+      chessPlan: this.CHESS_PLAN.slice(),
+      chess: { logs: [] },
+      reviews: {},
+      activeDates: {},
+      achievements: {},
+      customAch: [],
+      dailyNotes: {},
+      focus: null,
+      muted: false,
+      theme: 'light'
+    };
+  }
+  migrate(d){
+    d.weekStart = d.weekStart || {};
+    d.goals = d.goals || {};
+    d.rewards = d.rewards || this.DEFAULT_REWARDS.map(r=>({...r}));
+    d.potions = d.potions || this.DEFAULT_POTIONS.map(p=>({...p}));
+    d.badHabits = d.badHabits || this.DEFAULT_BADHABITS.map(b=>({...b}));
+    d.habitLog = d.habitLog || [];
+    if (d.hp === undefined) d.hp = null;
+    d.claims = d.claims || [];
+    d.chessPlan = d.chessPlan || this.CHESS_PLAN.slice();
+    d.chess = d.chess || { logs: [] };
+    d.reviews = d.reviews || {};
+    d.activeDates = d.activeDates || {};
+    d.achievements = d.achievements || {};
+    d.customAch = d.customAch || [];
+    d.dailyNotes = d.dailyNotes || {};
+    if (d.focus === undefined) d.focus = null;
+    d.theme = d.theme || 'light';
+    if (!d.currentWeek){ const wk=this.mondayKey(new Date()); d.currentWeek=wk; d.goals[wk]=d.goals[wk]||[]; d.weekStart[wk]=wk; }
+    return d;
+  }
+  persist(){ try { localStorage.setItem(this.KEY, JSON.stringify(this.state.data)); } catch(e){} }
+
+  // ---------- date helpers ----------
+  dateKey(dt){ const d=new Date(dt); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  mondayKey(dt){ const d=new Date(dt); const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); d.setHours(0,0,0,0); return this.dateKey(d); }
+  parseKey(k){ const [y,m,dd]=k.split('-').map(Number); return new Date(y,m-1,dd); }
+  addDays(k,n){ const d=this.parseKey(k); d.setDate(d.getDate()+n); return this.dateKey(d); }
+  todayIdx(){ return (new Date().getDay()+6)%7; }
+  weekLabel(wk){
+    const s=this.parseKey(wk), e=this.parseKey(this.addDays(wk,6));
+    const mo=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return s.getDate()+' '+mo[s.getMonth()]+' – '+e.getDate()+' '+mo[e.getMonth()];
+  }
+
+  // ---------- goal completion math ----------
+  goalUnits(g){ // {done, total, complete}
+    if (g.type==='daily'){ const done=(g.checks||[]).filter(Boolean).length; const total=g.targetDays||7; return {done, total, complete: done>=total}; }
+    if (g.type==='count'){ const done=g.count||0; const total=g.target||1; return {done, total, complete: done>=total}; }
+    return { done: g.done?1:0, total:1, complete: !!g.done };
+  }
+  goalEarned(g){ // positive xp earned so far
+    if (g.type==='daily') return ((g.checks||[]).filter(Boolean).length)*g.xp;
+    if (g.type==='count') return (g.count||0)*g.xp;
+    return g.done ? g.xp : 0;
+  }
+
+  // ---------- big stats compute ----------
+  stats(){
+    const d = this.state.data;
+    let earnedXP=0, penaltyXP=0, curRiskXP=0;
+    const areaEarned = {}; this.AREAS.forEach(a=>areaEarned[a.id]=0);
+    const weekXP = {}; // wk -> earned this week
+    const weekPct = {}; // wk -> completion %
+    const byTitle = {}; // goal title -> cumulative units done (all weeks)
+    let perfectWeeks=0, unitsEver=0;
+
+    Object.keys(d.goals).forEach(wk=>{
+      const goals = d.goals[wk]||[];
+      let wkEarn=0, wkDoneU=0, wkTotU=0;
+      const closed = wk !== d.currentWeek;
+      goals.forEach(g=>{
+        const u=this.goalUnits(g), earn=this.goalEarned(g);
+        wkEarn+=earn; earnedXP+=earn;
+        areaEarned[g.areaId]=(areaEarned[g.areaId]||0)+earn;
+        unitsEver += u.done;
+        const tk=(g.title||'').trim().toLowerCase(); if(tk) byTitle[tk]=(byTitle[tk]||0)+u.done;
+        wkDoneU += Math.min(u.done,u.total); wkTotU += u.total;
+        if (g.priority==='main' && !u.complete){
+          const pen = g.penalty||0;
+          if (closed) penaltyXP += pen; else curRiskXP += pen;
+        }
+      });
+      weekXP[wk]=wkEarn;
+      const pct = wkTotU>0 ? Math.round(wkDoneU/wkTotU*100) : 0;
+      weekPct[wk]=pct;
+      if (wkTotU>0 && pct>=100 && goals.length>0) perfectWeeks++;
+    });
+
+    // chess xp
+    let chessGames=0, chessMin=0, chessXP=0;
+    (d.chess.logs||[]).forEach(l=>{ chessGames+=(+l.games||0); chessMin+=(+l.minutes||0); chessXP += (+l.games||0)*5 + Math.floor((+l.minutes||0)/5)*2; });
+    earnedXP += chessXP; areaEarned.cre += chessXP;
+
+    // reflection xp
+    const reflections = Object.values(d.reviews).filter(r=>r&&r.done).length;
+    earnedXP += reflections*60;
+
+    const spent = (d.claims||[]).reduce((a,c)=>a+(c.cost||0),0);
+    const coins = earnedXP - spent;
+
+    const lvl = this.levelInfo(earnedXP);
+    const maxHP = this.maxHP(lvl.level);
+    const hp = (d.hp==null) ? maxHP : Math.max(0, Math.min(maxHP, d.hp));
+    const hpPct = Math.round(hp/maxHP*100);
+    const tier = this.tierFor(lvl.level);
+
+    // streak
+    const { streak, best } = this.streakInfo(d.activeDates);
+
+    // area levels
+    const areaLvl={}; let maxAreaLvl=0, areasAt2=0;
+    this.AREAS.forEach(a=>{ const li=this.areaLevelInfo(areaEarned[a.id]||0); areaLvl[a.id]=li; if(li.level>maxAreaLvl)maxAreaLvl=li.level; if(li.level>=2)areasAt2++; });
+
+    const cwk=d.currentWeek;
+    return {
+      earnedXP, penaltyXP, curRiskXP, spent, coins, available:coins,
+      hp, maxHP, hpPct, tier,
+      level:lvl.level, into:lvl.into, need:lvl.need, rank:this.rankFor(lvl.level),
+      streak, bestStreak:best,
+      areaEarned, areaLvl, maxAreaLvl, areasAt2,
+      weekXP, weekPct, perfectWeeks, unitsEver,
+      chessGames, chessMin, chessXP,
+      reflections,
+      rewardsClaimed:(d.claims||[]).length,
+      goalUnitsByTitle: byTitle,
+      curPct: weekPct[cwk]||0
+    };
+  }
+  levelInfo(xp){ let lvl=1, rem=xp; for(;;){ const need=90+lvl*45; if(rem>=need){rem-=need;lvl++;} else return {level:lvl,into:rem,need}; } }
+  areaLevelInfo(xp){ let lvl=1, rem=xp; for(;;){ const need=50+lvl*30; if(rem>=need){rem-=need;lvl++;} else return {level:lvl,into:rem,need}; } }
+  rankFor(l){ let r=this.RANKS[0]; this.RANKS.forEach(x=>{ if(l>=x.min)r=x; }); return r.name; }
+  streakInfo(dates){
+    const keys=Object.keys(dates||{}).filter(k=>dates[k]).sort();
+    if(!keys.length) return {streak:0,best:0};
+    const set=new Set(keys);
+    // best
+    let best=0,run=0,prev=null;
+    keys.forEach(k=>{ if(prev && this.addDays(prev,1)===k) run++; else run=1; best=Math.max(best,run); prev=k; });
+    // current (ending today or yesterday)
+    const today=this.dateKey(new Date());
+    let cur=0, cursor= set.has(today)?today:(set.has(this.addDays(today,-1))?this.addDays(today,-1):null);
+    while(cursor && set.has(cursor)){ cur++; cursor=this.addDays(cursor,-1); }
+    return {streak:cur, best};
+  }
+
+  // ---------- mutations ----------
+  markToday(){ this.state.data.activeDates[this.dateKey(new Date())]=true; }
+  curHP(){ const s=this.stats(); return s.hp; }
+  ensureHP(){ const d=this.state.data; if(d.hp==null) d.hp=this.maxHP(this.stats().level); }
+  damageHP(amount){ const d=this.state.data; this.ensureHP(); d.hp=Math.max(0, d.hp-amount); }
+  healHP(amount){ const d=this.state.data; this.ensureHP(); const mx=this.maxHP(this.stats().level); d.hp=Math.min(mx, d.hp+amount); }
+  commit(before, fx){
+    const s=this.stats();
+    if(before && s.level>before.level){ this.state.data.hp=this.maxHP(s.level); this.levelUpFx(s.level, s.rank); this.sound('level'); }
+    this.checkAch(s);
+    this.persist();
+    this.setState({t:Date.now()});
+    if(fx) fx();
+  }
+  curGoals(){ const d=this.state.data; return d.goals[d.currentWeek]||[]; }
+
+  toggleDay(g,i){
+    const before=this.stats();
+    g.checks=g.checks||Array(7).fill(false);
+    const was=g.checks[i]; g.checks[i]=!was;
+    if(g.checks[i]){ this.markToday(); this.sound('tick'); }
+    this.commit(before, ()=>{ if(g.checks[i]) this.celebrate('+'+g.xp+' XP', this.areaColor(g.areaId)); });
+  }
+  incCount(g,delta){
+    const before=this.stats();
+    g.count=Math.max(0,(g.count||0)+delta);
+    if(delta>0){ this.markToday(); this.sound('tick'); }
+    this.commit(before, ()=>{ if(delta>0) this.celebrate('+'+g.xp+' XP', this.areaColor(g.areaId)); });
+  }
+  toggleWeekly(g){
+    const before=this.stats();
+    g.done=!g.done;
+    if(g.done){ this.markToday(); this.sound('tick'); }
+    this.commit(before, ()=>{ if(g.done) this.celebrate('+'+g.xp+' XP', this.areaColor(g.areaId)); });
+  }
+
+  saveGoal(f){
+    const d=this.state.data; const arr=d.goals[d.currentWeek];
+    const g={
+      id: f.id||('g'+Date.now()+Math.random().toString(36).slice(2,6)),
+      areaId:f.areaId, title:f.title.trim(), priority:f.priority, type:f.type,
+      xp:Math.max(0,+f.xp||0),
+      penalty: f.priority==='main'?Math.max(0,+f.penalty||0):0,
+      targetDays: f.type==='daily'?Math.min(7,Math.max(1,+f.targetDays||7)):undefined,
+      target: f.type==='count'?Math.max(1,+f.target||1):undefined,
+    };
+    if(f.id){ const i=arr.findIndex(x=>x.id===f.id); const old=arr[i]; g.checks=old.checks; g.count=old.count; g.done=old.done; arr[i]=g; }
+    else { if(g.type==='daily')g.checks=Array(7).fill(false); if(g.type==='count')g.count=0; if(g.type==='weekly')g.done=false; arr.push(g); }
+    this.setState({goalForm:null}); this.commit(null);
+  }
+  deleteGoal(id){ const d=this.state.data; d.goals[d.currentWeek]=d.goals[d.currentWeek].filter(g=>g.id!==id); this.setState({goalForm:null}); this.commit(null); }
+
+  importSuggested(){
+    const d=this.state.data; const arr=d.goals[d.currentWeek];
+    this.SUGGESTED.forEach(([areaId,title,type,xp,tv,priority])=>{
+      const g={ id:'g'+Date.now()+Math.random().toString(36).slice(2,7), areaId, title, priority, type, xp,
+        penalty: priority==='main'?Math.round(xp*0.6):0 };
+      if(type==='daily'){ g.targetDays=tv; g.checks=Array(7).fill(false); }
+      else if(type==='count'){ g.target=tv; g.count=0; }
+      else g.done=false;
+      arr.push(g);
+    });
+    this.commit(null);
+  }
+
+  claimReward(r){
+    const s=this.stats(); if(s.coins < r.cost || s.level < (r.minLevel||1)) return;
+    const before=this.stats();
+    this.state.data.claims.push({ id:'c'+Date.now(), type:'reward', rewardId:r.id, name:r.name, cost:r.cost, date:this.dateKey(new Date()) });
+    this.sound('coin');
+    this.commit(before, ()=>this.celebrate('−'+r.cost+' monedas · '+r.name, this.C.gold, true));
+  }
+  buyPotion(p){
+    const s=this.stats(); if(s.coins < p.cost || s.hp >= s.maxHP) return;
+    const healed = p.heal>=9999 ? (s.maxHP - s.hp) : Math.min(p.heal, s.maxHP - s.hp);
+    const before=this.stats();
+    this.ensureHP(); this.state.data.hp = s.hp + healed;
+    this.state.data.claims.push({ id:'c'+Date.now(), type:'potion', name:p.name, cost:p.cost, date:this.dateKey(new Date()) });
+    this.sound('heal');
+    this.commit(before, ()=>this.celebrate('+'+healed+' ♥ '+p.name, this.C.green));
+  }
+  openRewardForm(r, kind){ kind = kind || (r&&r.heal!==undefined?'potion':'reward'); this.setState({rewardForm: r?{...r, kind, heal:r.heal||30, minLevel:r.minLevel||1}:{kind, name:'', cost: kind==='potion'?60:100, icon: kind==='potion'?'local_drink':'redeem', heal:30, minLevel:1}}); }
+  saveReward(f){
+    const d=this.state.data;
+    if(f.kind==='potion'){
+      const rec={ id:f.id||('p'+Date.now()), name:f.name.trim(), cost:Math.max(0,+f.cost||0), heal:Math.max(1,+f.heal||1), icon:f.icon||'local_drink' };
+      if(f.id){ const i=d.potions.findIndex(x=>x.id===f.id); d.potions[i]=rec; } else d.potions.push(rec);
+    } else {
+      const rec={ id:f.id||('r'+Date.now()), name:f.name.trim(), cost:Math.max(0,+f.cost||0), minLevel:Math.max(1,+f.minLevel||1), icon:f.icon||'redeem' };
+      if(f.id){ const i=d.rewards.findIndex(x=>x.id===f.id); d.rewards[i]=rec; } else d.rewards.push(rec);
+    }
+    this.setState({rewardForm:null}); this.commit(null);
+  }
+  deleteReward(id){ const d=this.state.data; d.rewards=d.rewards.filter(r=>r.id!==id); d.potions=(d.potions||[]).filter(p=>p.id!==id); this.setState({rewardForm:null}); this.commit(null); }
+
+  // ---------- hábitos negativos ----------
+  openHabitForm(b){ this.setState({habitForm: b?{...b}:{name:'',damage:12,icon:'block'}}); }
+  saveHabit(f){ const d=this.state.data; d.badHabits=d.badHabits||[]; const rec={id:f.id||('b'+Date.now()),name:f.name.trim(),damage:Math.max(0,+f.damage||0),icon:f.icon||'block'}; if(f.id){const i=d.badHabits.findIndex(x=>x.id===f.id);d.badHabits[i]=rec;}else d.badHabits.push(rec); this.setState({habitForm:null}); this.commit(null); }
+  deleteHabit(id){ const d=this.state.data; d.badHabits=(d.badHabits||[]).filter(x=>x.id!==id); d.habitLog=(d.habitLog||[]).filter(l=>l.habitId!==id); this.setState({habitForm:null}); this.commit(null); }
+  logHabit(b){ const d=this.state.data; const before=this.stats(); this.damageHP(b.damage); d.habitLog.unshift({id:'hl'+Date.now(),habitId:b.id,name:b.name,damage:b.damage,date:this.dateKey(new Date())}); this.sound('hurt'); this.commit(before, ()=>this.celebrate('−'+b.damage+' ♥ '+b.name, this.C.danger)); }
+  undoHabit(logId){ const d=this.state.data; const l=(d.habitLog||[]).find(x=>x.id===logId); if(!l)return; this.healHP(l.damage); d.habitLog=d.habitLog.filter(x=>x.id!==logId); this.commit(null); }
+  habitCountWeek(id){ const d=this.state.data; const ws=d.currentWeek, we=this.addDays(ws,6); return (d.habitLog||[]).filter(l=>l.habitId===id && l.date>=ws && l.date<=we).length; }
+
+  addChessLog(){
+    const cd=this.state.chessDraft;
+    if(!cd.games && !cd.minutes) return;
+    const before=this.stats();
+    const idx=this.todayIdx();
+    this.state.data.chess.logs.unshift({
+      id:'cl'+Date.now(), date:this.dateKey(new Date()), day:idx,
+      theme:this.state.data.chessPlan[idx],
+      games:+cd.games||0, minutes:+cd.minutes||0, result:cd.result||'', notes:(cd.notes||'').trim()
+    });
+    this.markToday(); this.sound('tick');
+    const xp=(+cd.games||0)*5 + Math.floor((+cd.minutes||0)/5)*2;
+    this.setState({chessDraft:{games:'',minutes:'',result:'',notes:''}});
+    this.commit(before, ()=>{ if(xp>0) this.celebrate('+'+xp+' XP · Ajedrez', this.areaColor('cre')); });
+  }
+  delChessLog(id){ const d=this.state.data; d.chess.logs=d.chess.logs.filter(l=>l.id!==id); this.commit(null); }
+  setPlan(i,v){ this.state.data.chessPlan[i]=v; this.setState({t:Date.now()}); this.persist(); }
+
+  setReview(wk,k,v){ const d=this.state.data; d.reviews[wk]=d.reviews[wk]||{done:false}; d.reviews[wk][k]=v; this.setState({t:Date.now()}); this.persist(); }
+  finishReview(wk){
+    const r=this.state.data.reviews[wk]; if(!r) return;
+    const answered=this.REVIEW_QS.filter(q=>(r[q.k]||'').trim()).length;
+    if(answered<3){ return; }
+    const before=this.stats();
+    const wasDone=r.done; r.done=true;
+    this.commit(before, ()=>{ if(!wasDone) this.celebrate('+60 XP · Revisión', this.C.primary); if(!wasDone) this.sound('level'); });
+  }
+
+  startNewWeek(copy){
+    const d=this.state.data;
+    const closing=d.goals[d.currentWeek]||[];
+    let dmg=0; closing.forEach(g=>{ const u=this.goalUnits(g); if(g.priority==='main'&&!u.complete) dmg+=g.penalty||0; });
+    if(dmg>0){ this.ensureHP(); d.hp=Math.max(0,d.hp-dmg); }
+    const real=this.mondayKey(new Date());
+    let next=this.addDays(d.currentWeek,7);
+    if(this.parseKey(real) > this.parseKey(next)) next=real;
+    d.weekStart[next]=next;
+    if(copy){
+      d.goals[next]=(d.goals[d.currentWeek]||[]).map(g=>{
+        const n={...g, id:'g'+Date.now()+Math.random().toString(36).slice(2,6)};
+        if(n.type==='daily')n.checks=Array(7).fill(false);
+        if(n.type==='count')n.count=0;
+        if(n.type==='weekly')n.done=false;
+        return n;
+      });
+    } else d.goals[next]=[];
+    d.currentWeek=next;
+    this.setState({view:'metas', histWeek:null}); this.commit(null);
+    if(dmg>0){ this.celebrate('−'+dmg+' ♥ metas principales', this.C.danger); this.sound('hurt'); }
+    else this.celebrate('¡Nueva semana!', this.C.primary);
+  }
+  gotoWeek(wk){ this.state.data.currentWeek=wk; this.setState({view:'metas',histWeek:null}); this.commit(null); }
+
+  // ---------- backup / respaldo ----------
+  exportData(){
+    try{
+      const blob=new Blob([JSON.stringify(this.state.data,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url; a.download='mi-camino-respaldo-'+this.dateKey(new Date())+'.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(e){ alert('No se pudo exportar la copia.'); }
+  }
+  importData(file){
+    if(!file) return;
+    const r=new FileReader();
+    r.onload=()=>{ try{
+      const parsed=JSON.parse(r.result);
+      const md=this.migrate(parsed);
+      this.setState({data:md, settings:false}, ()=>{ this.persist(); this.applyTheme(); });
+      setTimeout(()=>{ this.celebrate('Copia restaurada', this.C.green); this.sound('level'); },150);
+    }catch(e){ alert('El archivo no es una copia válida.'); } };
+    r.readAsText(file);
+  }
+  resetAll(){
+    if(!window.confirm('¿Borrar TODO tu progreso y empezar de cero? Esto no se puede deshacer. (Considera exportar una copia antes.)')) return;
+    this.setState({data:this.seed(), settings:false}, ()=>{ this.persist(); this.applyTheme(); });
+  }
+
+  // ---------- daily note / mood ----------
+  todayNote(){ const k=this.dateKey(new Date()); return this.state.data.dailyNotes[k]||{}; }
+  setMood(m){ const d=this.state.data; const k=this.dateKey(new Date()); d.dailyNotes[k]=d.dailyNotes[k]||{}; d.dailyNotes[k].mood=(d.dailyNotes[k].mood===m?null:m); this.setState({t:Date.now()}); this.persist(); }
+  setNote(v){ const d=this.state.data; const k=this.dateKey(new Date()); d.dailyNotes[k]=d.dailyNotes[k]||{}; d.dailyNotes[k].note=v; this.setState({t:Date.now()}); this.persist(); }
+
+  // ---------- foco del día ----------
+  setFocus(id){ this.state.data.focus={ date:this.dateKey(new Date()), goalId:id }; this.setState({t:Date.now()}); this.persist(); }
+  clearFocus(){ this.state.data.focus=null; this.setState({t:Date.now()}); this.persist(); }
+
+  // ---------- custom achievements ----------
+  openAchForm(a){ this.setState({achForm: a?{...a}:{name:'',icon:'star',metric:'goal',goalTitle:'',target:1}}); }
+  saveCustomAch(f){
+    const d=this.state.data; d.customAch=d.customAch||[];
+    const rec={ id:f.id||('ca'+Date.now()), name:f.name.trim(), icon:f.icon||'star', metric:f.metric, goalTitle:(f.goalTitle||'').trim(), target:Math.max(1,+f.target||1), unlocked:f.unlocked||null };
+    if(f.id){ const i=d.customAch.findIndex(x=>x.id===f.id); d.customAch[i]=rec; } else d.customAch.push(rec);
+    this.setState({achForm:null}); this.commit(null);
+  }
+  deleteCustomAch(id){ const d=this.state.data; d.customAch=(d.customAch||[]).filter(x=>x.id!==id); this.setState({achForm:null}); this.commit(null); }
+  metricLabel(m){ return {goal:'Completar una meta X veces',streak:'Días de racha (récord)',level:'Nivel alcanzado',xp:'XP total ganado',chess:'Partidas de ajedrez'}[m]||m; }
+
+  // ---------- new-week reminder ----------
+  renderWeekReminder(){
+    const h=this.h,C=this.C,d=this.state.data;
+    if(this.parseKey(this.mondayKey(new Date())) <= this.parseKey(d.currentWeek)) return null;
+    return h('div',{style:{display:'flex',alignItems:'center',gap:'13px',background:C.primarySoft,border:'1px solid '+C.primary+'44',borderRadius:'16px',padding:'14px 18px',flexWrap:'wrap'}},
+      this.icon('calendar_month',24,C.primary,true),
+      h('div',{style:{flex:1,minWidth:'170px'}},
+        h('div',{style:{fontWeight:700,fontSize:'14px',color:C.primaryD}},'Empezó una nueva semana'),
+        h('div',{style:{fontSize:'12.5px',color:C.muted,fontWeight:600}},'Tu semana activa sigue siendo '+this.weekLabel(d.currentWeek)+'. Inicia la nueva para no perder el ritmo.')),
+      h('div',{style:{display:'flex',gap:'8px',flexWrap:'wrap'}},
+        h('button',{onClick:()=>this.startNewWeek(true),style:this.ghostBtn()}, this.icon('content_copy',17,C.primary),'Repetir metas'),
+        h('button',{onClick:()=>this.startNewWeek(false),style:this.primaryBtn()}, this.icon('add',18,'#fff'),'Nueva semana'))
+    );
+  }
+
+  // ---------- foco card ----------
+  renderFocusCard(s){
+    const h=this.h,C=this.C,d=this.state.data; const today=this.dateKey(new Date());
+    const goals=this.curGoals();
+    const fg = (d.focus && d.focus.date===today) ? goals.find(g=>g.id===d.focus.goalId) : null;
+    return this.card([
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}},
+        h('div',{style:{display:'flex',alignItems:'center',gap:'8px'}}, this.icon('center_focus_strong',20,C.primary,true),
+          h('h3',{style:{margin:0,fontFamily:'"Space Grotesk"',fontSize:'16px'}},'Foco de hoy')),
+        fg?h('button',{onClick:()=>this.clearFocus(),style:{fontSize:'12px',fontWeight:700,color:C.faint}},'Cambiar'):null),
+      fg ? this.renderFocusGoal(fg) : this.renderFocusPicker(goals)
+    ], {display:'flex',flexDirection:'column'});
+  }
+  renderFocusGoal(g){
+    const h=this.h,C=this.C; const a=this.area(g.areaId); const ti=this.todayIdx();
+    let doneToday, label, act;
+    if(g.type==='daily'){ doneToday=!!(g.checks||[])[ti]; label=doneToday?'¡Hecho hoy!':'Marcar hecho hoy'; act=()=>{ if(!doneToday) this.toggleDay(g,ti); }; }
+    else if(g.type==='count'){ const u=this.goalUnits(g); doneToday=false; label='Sumar una vez ('+u.done+'/'+u.total+')'; act=()=>this.incCount(g,1); }
+    else { doneToday=!!g.done; label=doneToday?'¡Completada!':'Marcar completada'; act=()=>{ if(!doneToday) this.toggleWeekly(g); }; }
+    return h('div',{style:{flex:1,display:'flex',flexDirection:'column'}},
+      h('div',{style:{display:'flex',alignItems:'center',gap:'9px',marginBottom:'6px'}},
+        h('div',{style:{width:'34px',height:'34px',borderRadius:'10px',background:a.color+'1F',display:'grid',placeItems:'center',flexShrink:0}}, this.icon(a.icon,18,a.color,true)),
+        h('span',{style:{fontSize:'11px',fontWeight:700,color:a.color,textTransform:'uppercase',letterSpacing:'.4px'}},a.name)),
+      h('div',{style:{fontFamily:'"Space Grotesk"',fontSize:'19px',fontWeight:700,lineHeight:1.2,marginBottom:'14px',flex:1}},g.title),
+      h('button',{onClick:act,disabled:doneToday,
+        style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',width:'100%',padding:'13px',borderRadius:'13px',fontWeight:700,fontSize:'14.5px',color:'#fff',cursor:doneToday?'default':'pointer',background:doneToday?C.green:'linear-gradient(135deg,'+a.color+','+a.color+'cc)',opacity:doneToday?.9:1,boxShadow:doneToday?'none':'0 6px 16px '+a.color+'40'}},
+        this.icon(doneToday?'check_circle':'bolt',20,'#fff',true), label)
+    );
+  }
+  renderFocusPicker(goals){
+    const h=this.h,C=this.C;
+    if(!goals.length) return h('div',{style:{flex:1,display:'grid',placeItems:'center',color:C.faint,fontWeight:600,fontSize:'13px',textAlign:'center',padding:'10px'}},'Crea metas para elegir tu foco del día.');
+    return h('div',{style:{flex:1}},
+      h('p',{style:{margin:'0 0 10px',fontSize:'12.5px',color:C.muted,fontWeight:600}},'Elige UNA meta como prioridad para hoy:'),
+      h('div',{style:{display:'flex',flexWrap:'wrap',gap:'7px',maxHeight:'150px',overflowY:'auto'}},
+        goals.map(g=>{ const a=this.area(g.areaId);
+          return h('button',{key:g.id,onClick:()=>this.setFocus(g.id),
+            style:{display:'inline-flex',alignItems:'center',gap:'6px',padding:'8px 11px',borderRadius:'10px',border:'1px solid '+C.line2,background:C.card2,fontWeight:600,fontSize:'12.5px',color:C.text,maxWidth:'100%'}},
+            h('span',{style:{width:'8px',height:'8px',borderRadius:'50%',background:a.color,flexShrink:0}}),
+            h('span',{style:{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:'190px'}},g.title));
+        }))
+    );
+  }
+
+  // ---------- mood card ----------
+  renderMoodCard(){
+    const h=this.h,C=this.C; const dn=this.todayNote();
+    const moods=[['sentiment_very_dissatisfied','#E5615F','Mal'],['sentiment_dissatisfied','#EE9A3B','Bajo'],['sentiment_neutral','#C9A227','Normal'],['sentiment_satisfied','#5AA95F','Bien'],['sentiment_very_satisfied','#1DA574','Genial']];
+    return this.card([
+      h('div',{style:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}},
+        this.icon('mood',20,C.primary,true),
+        h('h3',{style:{margin:0,fontFamily:'"Space Grotesk"',fontSize:'16px'}},'¿Cómo va tu día?')),
+      h('div',{style:{display:'flex',gap:'8px',justifyContent:'space-between',marginBottom:'12px'}},
+        moods.map(([ic,col,lb])=>{ const on=dn.mood===ic;
+          return h('button',{key:ic,onClick:()=>this.setMood(ic),title:lb,
+            style:{flex:1,aspectRatio:'1',borderRadius:'12px',display:'grid',placeItems:'center',border:'2px solid '+(on?col:C.line2),background:on?col+'22':C.card2,transition:'.15s'}},
+            this.icon(ic,26,on?col:C.faint,on));
+        })),
+      h('textarea',{rows:2,value:dn.note||'',placeholder:'Una nota rápida de hoy (opcional)...',onChange:e=>this.setNote(e.target.value),
+        style:{...this.inp(),width:'100%'}})
+    ], {display:'flex',flexDirection:'column'});
+  }
+
+  // ---------- avatar tamagotchi ----------
+  renderAvatar(s, size){
+    const h=this.h; const t=s.tier; size=size||150;
+    const mood = s.hpPct<=0?'ko': s.hpPct<20?'sick': s.hpPct<45?'sad': s.hpPct<75?'ok':'happy';
+    const sick = mood==='sick'||mood==='ko'; const skin='#3a2b2b';
+    const eye=(pos)=>h('div',{key:pos,style:{position:'absolute',top:'38%',left:pos,transform:'translateX(-50%)',width:size*0.12+'px',height:size*0.14+'px',borderRadius:'50%',background:'#fff',display:'grid',placeItems:'center',boxShadow:'inset 0 1px 2px rgba(0,0,0,.15)'}},
+      h('div',{style:{width:'52%',height:'52%',borderRadius:'50%',background:'#2a2130',transform: mood==='sad'||sick?'translateY(2px)':'none'}}));
+    let mouth;
+    if(mood==='happy') mouth={width:size*0.3+'px',height:size*0.15+'px',borderBottom:'4px solid '+skin,borderRadius:'0 0 90% 90%'};
+    else if(mood==='ok') mouth={width:size*0.2+'px',height:'4px',background:skin,borderRadius:'4px'};
+    else mouth={width:size*0.26+'px',height:size*0.13+'px',borderTop:'4px solid '+skin,borderRadius:'90% 90% 0 0'};
+    const cheek=(side)=>h('div',{key:side,style:{position:'absolute',top:'54%',[side]:'18%',width:size*0.11+'px',height:size*0.06+'px',borderRadius:'50%',background:'rgba(255,120,140,.5)'}});
+    return h('div',{style:{position:'relative',width:size+'px',height:size+'px',animation:'bob 3.2s ease-in-out infinite',filter:sick?'grayscale(.5) brightness(.96)':'none',transition:'filter .4s'}},
+      h('div',{style:{position:'absolute',top:'-2%',left:'50%',transform:'translateX(-50%)',display:'flex',gap:'3px',zIndex:2}},
+        Array.from({length:Math.min(3,t.idx+1)}).map((_,i)=>h('div',{key:i,style:{width:size*0.055+'px',height:size*0.055+'px',borderRadius:'50%',background:t.accent,boxShadow:'0 1px 3px rgba(0,0,0,.2)'}}))),
+      h('div',{style:{position:'absolute',bottom:0,left:'50%',transform:'translateX(-50%)',width:size*0.82+'px',height:size*0.78+'px',borderRadius:'46% 46% 44% 44% / 54% 54% 46% 46%',background:'linear-gradient(160deg,'+t.color+','+t.accent+')',boxShadow:'inset 0 -'+(size*0.08)+'px '+(size*0.12)+'px rgba(0,0,0,.13), 0 '+(size*0.05)+'px '+(size*0.14)+'px rgba(0,0,0,.2)'}},
+        eye('34%'), eye('66%'),
+        (mood==='happy'||mood==='ok')?cheek('left'):null,
+        (mood==='happy'||mood==='ok')?cheek('right'):null,
+        h('div',{style:{position:'absolute',top:'62%',left:'50%',transform:'translateX(-50%)',...mouth}}),
+        h('div',{style:{position:'absolute',bottom:'-'+(size*0.025)+'px',left:'30%',width:size*0.17+'px',height:size*0.09+'px',borderRadius:'50%',background:t.accent}}),
+        h('div',{style:{position:'absolute',bottom:'-'+(size*0.025)+'px',right:'30%',width:size*0.17+'px',height:size*0.09+'px',borderRadius:'50%',background:t.accent}})
+      ),
+      sick?h('div',{style:{position:'absolute',top:'26%',right:'8%',zIndex:3}}, this.icon('water_drop',size*0.15,'#8fb7e0',true)):null
+    );
+  }
+  renderAvatarHero(s){
+    const h=this.h,C=this.C; const t=s.tier; const pctLvl=Math.round(s.into/s.need*100);
+    const hpColor = s.hpPct<25?'#FF6B6B' : s.hpPct<50?'#FFC64B' : '#8BE8B8';
+    return h('div',{style:{background:'linear-gradient(150deg,'+C.primary+',#7C5CFF 55%,#8B5CF6)',borderRadius:'20px',padding:this.state.narrow?'20px':'24px',color:'#fff',boxShadow:'0 16px 40px '+C.primaryGlow,display:'grid',gridTemplateColumns:this.col2('auto 1fr'),gap:this.state.narrow?'16px':'26px',alignItems:'center'}},
+      h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:'6px'}},
+        h('div',{style:{background:'rgba(255,255,255,.14)',borderRadius:'50%',padding:'8px'}}, this.renderAvatar(s, this.state.narrow?118:148)),
+        h('div',{style:{fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'16px'}}, t.name),
+        h('div',{style:{fontSize:'11px',fontWeight:700,letterSpacing:'1.5px',opacity:.82}},'NIVEL '+s.level+' · '+s.rank.toUpperCase())
+      ),
+      h('div',{style:{width:'100%'}},
+        h('div',{style:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'5px'}},
+          this.icon('favorite',18,'#FFB3B3',true), h('span',{style:{fontWeight:700,fontSize:'13px'}},'Vida'),
+          h('span',{style:{marginLeft:'auto',fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'14px'}}, s.hp+' / '+s.maxHP)),
+        h('div',{style:{height:'15px',borderRadius:'8px',background:'rgba(0,0,0,.22)',overflow:'hidden',marginBottom:'15px'}},
+          h('div',{style:{width:s.hpPct+'%',height:'100%',background:hpColor,borderRadius:'8px',transition:'width .5s'}})),
+        h('div',{style:{display:'flex',alignItems:'center',gap:'8px',marginBottom:'5px'}},
+          this.icon('bolt',18,'#FFE08A',true), h('span',{style:{fontWeight:700,fontSize:'13px'}},'Experiencia'),
+          h('span',{style:{marginLeft:'auto',fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'14px'}}, s.into+' / '+s.need)),
+        h('div',{style:{height:'12px',borderRadius:'7px',background:'rgba(0,0,0,.22)',overflow:'hidden',marginBottom:'16px'}},
+          h('div',{style:{width:pctLvl+'%',height:'100%',background:'linear-gradient(90deg,#FFE7A8,#FFC64B)',borderRadius:'7px',transition:'width .5s'}})),
+        h('div',{style:{display:'flex',alignItems:'center',gap:'10px',flexWrap:'wrap'}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:'7px',background:'rgba(255,255,255,.16)',padding:'8px 14px',borderRadius:'12px'}},
+            this.icon('paid',20,'#FFE08A',true),
+            h('span',{style:{fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'18px'}}, s.coins.toLocaleString('es')),
+            h('span',{style:{fontSize:'12px',fontWeight:600,opacity:.85}},'monedas')),
+          h('button',{onClick:()=>this.setState({view:'tienda',shopTab:'potions'}),
+            style:{display:'inline-flex',alignItems:'center',gap:'6px',background:'#fff',color:C.primaryD,fontWeight:700,fontSize:'13px',padding:'10px 15px',borderRadius:'12px'}},
+            this.icon('healing',18,C.primaryD),'Curar'))
+      )
+    );
+  }
+
+  // ---------- fx ----------
+  areaColor(id){ const a=this.AREAS.find(x=>x.id===id); return a?a.color:this.C.primary; }
+  area(id){ return this.AREAS.find(x=>x.id===id); }
+  sound(kind){
+    if(this.state.data.muted) return;
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext; if(!AC)return;
+      this.ac=this.ac||new AC();
+      const ac=this.ac; const now=ac.currentTime;
+      const notes = kind==='level'?[523,659,784,1047] : kind==='coin'?[880,1175] : kind==='hurt'?[330,220] : kind==='heal'?[659,880] : [784,988];
+      notes.forEach((f,i)=>{
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.type=kind==='coin'?'square':(kind==='hurt'?'sawtooth':'triangle'); o.frequency.value=f;
+        const t=now+i*(kind==='level'?0.09:0.05);
+        g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.11,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
+        o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+0.24);
+      });
+    }catch(e){}
+  }
+  celebrate(text, color, isSpend){
+    const layer=document.getElementById('fxLayer'); if(!layer) return;
+    const t=document.createElement('div');
+    t.textContent=text;
+    t.style.cssText='position:absolute;left:50%;top:120px;transform:translate(-50%,0);font-family:\'Space Grotesk\',sans-serif;font-weight:700;font-size:26px;color:'+color+';text-shadow:0 4px 16px rgba(0,0,0,.18);animation:fxfloat 1.15s cubic-bezier(.2,.8,.3,1) forwards;white-space:nowrap';
+    layer.appendChild(t); setTimeout(()=>t.remove(),1250);
+    const cols=isSpend?['#E9990A','#F5C24A','#FFE0A3']:[color,this.C.primary,this.C.gold,this.C.green,'#FF6B4A'];
+    const cx=window.innerWidth/2;
+    for(let i=0;i<(isSpend?16:22);i++){
+      const p=document.createElement('div');
+      const sz=6+Math.random()*7;
+      p.style.cssText='position:absolute;width:'+sz+'px;height:'+sz+'px;border-radius:'+(Math.random()<.5?'50%':'2px')+';background:'+cols[i%cols.length]+';left:'+(cx+(Math.random()-0.5)*260)+'px;top:'+(90+Math.random()*30)+'px;opacity:.95;animation:fxfall '+(1+Math.random()*0.7)+'s ease-in forwards;animation-delay:'+(Math.random()*0.12)+'s';
+      layer.appendChild(p); setTimeout(()=>p.remove(),2000);
+    }
+  }
+  levelUpFx(level, rank){
+    const layer=document.getElementById('fxLayer'); if(!layer) return;
+    const b=document.createElement('div');
+    b.style.cssText='position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);padding:26px 40px;border-radius:22px;background:linear-gradient(135deg,#6D5AE6,#8B5CF6);color:#fff;text-align:center;box-shadow:0 24px 60px rgba(109,90,230,.5);animation:lvlup .9s cubic-bezier(.2,.9,.3,1.1) forwards;font-family:\'Space Grotesk\',sans-serif';
+    b.innerHTML='<div style="font-size:13px;letter-spacing:3px;opacity:.85;font-weight:600">SUBISTE DE NIVEL</div><div style="font-size:60px;font-weight:700;line-height:1.05;margin:2px 0">Nivel '+level+'</div><div style="font-size:16px;font-weight:600;opacity:.95">'+rank+'</div>';
+    layer.appendChild(b); setTimeout(()=>b.remove(),2200);
+    const cols=['#6D5AE6','#F2A01D','#1DA574','#FF6B4A','#EC4899','#3B82F6'];
+    for(let i=0;i<70;i++){ const p=document.createElement('div'); const sz=7+Math.random()*9;
+      p.style.cssText='position:absolute;width:'+sz+'px;height:'+sz+'px;border-radius:'+(Math.random()<.5?'50%':'2px')+';background:'+cols[i%cols.length]+';left:'+(Math.random()*100)+'vw;top:-20px;animation:fxfall '+(1.4+Math.random()*1.1)+'s ease-in forwards;animation-delay:'+(Math.random()*0.5)+'s';
+      layer.appendChild(p); setTimeout(()=>p.remove(),3200); }
+  }
+  checkAch(s){
+    const d=this.state.data;
+    this.ACH.forEach(a=>{
+      if(!d.achievements[a.id] && a.test(s)){
+        d.achievements[a.id]=this.dateKey(new Date());
+        setTimeout(()=>{ this.celebrate('🏆 '+a.name, this.C.gold); this.sound('level'); },200);
+      }
+    });
+    (d.customAch||[]).forEach(ca=>{
+      if(!ca.unlocked && this.customValue(ca,s) >= ca.target){
+        ca.unlocked=this.dateKey(new Date());
+        setTimeout(()=>{ this.celebrate('🏆 '+ca.name, this.C.gold); this.sound('level'); },200);
+      }
+    });
+  }
+  customValue(ca,s){
+    if(ca.metric==='level') return s.level;
+    if(ca.metric==='xp') return s.earnedXP;
+    if(ca.metric==='streak') return s.bestStreak;
+    if(ca.metric==='chess') return s.chessGames;
+    return s.goalUnitsByTitle[(ca.goalTitle||'').trim().toLowerCase()]||0;
+  }
+
+  // ================= RENDER =================
+  renderVals(){ return { app: this.renderApp() }; }
+
+  icon(name,size,color,fill){ const h=this.h; return h('span',{style:{fontFamily:'"Material Symbols Outlined"',fontSize:(size||20)+'px',lineHeight:1,color:color||'inherit',userSelect:'none',fontVariationSettings:fill?"'FILL' 1":"'FILL' 0",flexShrink:0}},name); }
+
+  renderApp(){
+    const h=this.h, C=this.C, s=this.stats();
+    return h('div',{style:{maxWidth:'1120px',margin:'0 auto',padding:'0 20px 120px'}},
+      this.renderHeader(s),
+      this.renderNav(),
+      h('div',{key:this.state.view,style:{animation:'fadein .25s ease'}},
+        this.state.view==='dash'?this.renderDash(s):
+        this.state.view==='metas'?this.renderMetas(s):
+        this.state.view==='tienda'?this.renderTienda(s):
+        this.state.view==='logros'?this.renderLogros(s):
+        this.state.view==='ajedrez'?this.renderAjedrez(s):
+        this.state.view==='revision'?this.renderRevision(s):
+        this.renderHistorial(s)
+      ),
+      this.state.goalForm?this.renderGoalModal():null,
+      this.state.rewardForm?this.renderRewardModal():null,
+      this.state.settings?this.renderSettingsModal():null,
+      this.state.achForm?this.renderAchModal():null,
+      this.state.habitForm?this.renderHabitModal():null
+    );
+  }
+
+  renderHeader(s){
+    const h=this.h, C=this.C, d=this.state.data;
+    const chip=(icon,label,val,bg,fg)=>h('div',{style:{display:'flex',alignItems:'center',gap:'8px',background:bg,padding:'8px 13px',borderRadius:'13px'}},
+      this.icon(icon,19,fg,true),
+      h('div',{style:{display:'flex',flexDirection:'column',lineHeight:1.05}},
+        h('span',{style:{fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'16px',color:fg}},val),
+        h('span',{style:{fontSize:'10px',fontWeight:700,color:fg,opacity:.7,letterSpacing:'.4px',textTransform:'uppercase'}},label)
+      ));
+    return h('header',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'16px',padding:'22px 0 18px',flexWrap:'wrap'}},
+      h('div',{style:{display:'flex',alignItems:'center',gap:'13px'}},
+        h('div',{style:{width:'46px',height:'46px',borderRadius:'14px',background:'linear-gradient(135deg,'+C.primary+',#8B5CF6)',display:'grid',placeItems:'center',boxShadow:'0 8px 20px '+C.primaryGlow}}, this.icon('swords',26,'#fff',true)),
+        h('div',{},
+          h('div',{style:{fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'19px',letterSpacing:'-.3px'}},'Mi Camino'),
+          h('div',{style:{fontSize:'12px',color:C.muted,fontWeight:600}},'Nivel '+s.level+' · '+s.rank)
+        )
+      ),
+      h('div',{style:{display:'flex',alignItems:'center',gap:'9px',flexWrap:'wrap'}},
+        chip('paid','Monedas', s.coins.toLocaleString('es'), C.goldSoft, C.goldText),
+        chip('favorite', 'Vida', s.hp+'/'+s.maxHP, C.dangerSoft, C.danger),
+        h('button',{onClick:()=>this.toggleTheme(), title:'Tema',
+          style:{width:'42px',height:'42px',borderRadius:'12px',background:C.card,border:'1px solid '+C.line2,display:'grid',placeItems:'center',color:C.muted}},
+          this.icon(d.theme==='dark'?'light_mode':'dark_mode',20)),
+        h('button',{onClick:()=>this.setState({settings:true}), title:'Ajustes y respaldo',
+          style:{width:'42px',height:'42px',borderRadius:'12px',background:C.card,border:'1px solid '+C.line2,display:'grid',placeItems:'center',color:C.muted}},
+          this.icon('settings',20)),
+        h('button',{onClick:()=>{ d.muted=!d.muted; this.setState({t:Date.now()}); this.persist(); }, title:'Sonido',
+          style:{width:'42px',height:'42px',borderRadius:'12px',background:C.card,border:'1px solid '+C.line2,display:'grid',placeItems:'center',color:C.muted}},
+          this.icon(d.muted?'volume_off':'volume_up',20))
+      )
+    );
+  }
+
+  renderNav(){
+    const h=this.h, C=this.C;
+    const tabs=[['dash','Dashboard','space_dashboard'],['metas','Metas','checklist'],['tienda','Tienda','storefront'],['logros','Logros','trophy'],['ajedrez','Ajedrez','chess'],['revision','Revisión','edit_note'],['historial','Historial','history']];
+    return h('nav',{style:{display:'flex',gap:'6px',overflowX:'auto',padding:'4px',background:C.card,borderRadius:'16px',border:'1px solid '+C.line,marginBottom:'22px',position:'sticky',top:'10px',zIndex:50,boxShadow:'0 4px 18px rgba(30,27,51,.05)'}},
+      tabs.map(([id,label,ic])=>{ const on=this.state.view===id;
+        return h('button',{key:id,onClick:()=>this.setState({view:id,histWeek:null}),
+          style:{display:'flex',alignItems:'center',gap:'7px',padding:'10px 15px',borderRadius:'11px',whiteSpace:'nowrap',fontWeight:700,fontSize:'13.5px',color:on?'#fff':C.muted,background:on?C.primary:'transparent',transition:'.15s',boxShadow:on?'0 6px 16px '+C.primaryGlow:'none'}},
+          this.icon(ic,19,on?'#fff':C.faint,on), label);
+      })
+    );
+  }
+
+  card(children, extra){ const C=this.C; return this.h('div',{style:Object.assign({background:C.card,border:'1px solid '+C.line,borderRadius:'18px',padding:'20px'},extra||{})}, children); }
+  sectionTitle(t,sub){ const h=this.h,C=this.C; return h('div',{style:{marginBottom:'14px'}}, h('h2',{style:{margin:0,fontFamily:'"Space Grotesk"',fontSize:'20px',fontWeight:700,letterSpacing:'-.3px'}},t), sub?h('p',{style:{margin:'3px 0 0',color:C.muted,fontSize:'13.5px',fontWeight:500}},sub):null); }
+
+  // ---------------- DASHBOARD ----------------
+  renderDash(s){
+    const h=this.h, C=this.C, d=this.state.data;
+    const pctLvl=Math.round(s.into/s.need*100);
+    return h('div',{style:{display:'grid',gap:'18px'}},
+      this.renderWeekReminder(),
+      this.renderAvatarHero(s),
+      h('div',{style:{display:'grid',gridTemplateColumns:this.state.narrow?'repeat(2,1fr)':'repeat(4,1fr)',gap:'14px'}},
+        this.statTile('bolt','XP ganado', s.earnedXP.toLocaleString('es'), C.primary, C.primarySoft, 'No baja nunca'),
+        this.statTile('paid','Monedas', s.coins.toLocaleString('es'), C.goldText, C.goldSoft, 'Para gastar'),
+        this.statTile('local_fire_department','Racha', s.streak+' días', C.danger, C.dangerSoft, 'Mejor: '+s.bestStreak+'d'),
+        this.statTile('check_circle','Cumplimiento', s.curPct+'%', C.greenText, C.greenSoft, 'Esta semana')
+      ),
+      // risk banner
+      (s.curRiskXP>0 && this.todayIdx()>=5) ? h('div',{style:{display:'flex',alignItems:'center',gap:'12px',background:C.dangerSoft,border:'1px solid '+C.danger+'44',borderRadius:'16px',padding:'14px 18px'}},
+        this.icon('warning',22,C.danger,true),
+        h('div',{style:{fontSize:'13.5px',fontWeight:600,color:C.danger}},
+          h('b',{style:{fontFamily:'"Space Grotesk"'}},'−'+s.curRiskXP+' ♥ de vida en riesgo'),
+          ' — metas principales sin completar esta semana. Tu avatar recibirá ese daño al cerrar la semana si no las cumples (las secundarias nunca dañan).')
+      ):null,
+
+      // foco + estado de ánimo
+      h('div',{style:{display:'grid',gridTemplateColumns:this.col2('1.35fr 1fr'),gap:'18px'}},
+        this.renderFocusCard(s),
+        this.renderMoodCard()
+      ),
+
+      h('div',{style:{display:'grid',gridTemplateColumns:this.col2('1.1fr 1fr'),gap:'18px'}},
+        // radar character
+        this.card([
+          this.sectionTitle('Tu personaje','Atributos por área — crecen con cada acción'),
+          this.renderRadar(s)
+        ]),
+        // area bars
+        this.card([
+          this.sectionTitle('Áreas de vida'),
+          h('div',{style:{display:'grid',gap:'11px'}},
+            this.AREAS.map(a=>{ const li=s.areaLvl[a.id]; const p=Math.round(li.into/li.need*100);
+              return h('div',{key:a.id,style:{display:'flex',alignItems:'center',gap:'11px'}},
+                h('div',{style:{width:'32px',height:'32px',borderRadius:'9px',background:a.color+'1F',display:'grid',placeItems:'center',flexShrink:0}}, this.icon(a.icon,18,a.color,true)),
+                h('div',{style:{flex:1,minWidth:0}},
+                  h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:'12.5px',fontWeight:600,marginBottom:'3px'}},
+                    h('span',{style:{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},a.name),
+                    h('span',{style:{color:a.color,fontFamily:'"Space Grotesk"',fontWeight:700}},'Nv '+li.level)),
+                  h('div',{style:{height:'7px',borderRadius:'5px',background:C.line,overflow:'hidden'}},
+                    h('div',{style:{width:p+'%',height:'100%',background:a.color,borderRadius:'5px',transition:'width .5s'}}))
+                )
+              );
+            })
+          )
+        ])
+      ),
+      // weekly evolution chart
+      this.card([
+        this.sectionTitle('Evolución semanal','XP ganado por semana'),
+        this.renderWeekChart(s)
+      ])
+    );
+  }
+  statTile(icon,label,val,fg,bg,sub){ const h=this.h,C=this.C;
+    return h('div',{style:{background:C.card,border:'1px solid '+C.line,borderRadius:'16px',padding:'15px 16px'}},
+      h('div',{style:{width:'34px',height:'34px',borderRadius:'10px',background:bg,display:'grid',placeItems:'center',marginBottom:'9px'}}, this.icon(icon,19,fg,true)),
+      h('div',{style:{fontFamily:'"Space Grotesk"',fontSize:'25px',fontWeight:700,lineHeight:1,color:C.text}},val),
+      h('div',{style:{fontSize:'11.5px',fontWeight:700,color:C.muted,marginTop:'4px',textTransform:'uppercase',letterSpacing:'.4px'}},label),
+      sub?h('div',{style:{fontSize:'11.5px',color:C.faint,fontWeight:600,marginTop:'1px'}},sub):null
+    );
+  }
+  renderRadar(s){
+    const h=this.h,C=this.C; const cx=155,cy=150,R=112,N=8;
+    const maxLvl=Math.max(3,s.maxAreaLvl);
+    const pt=(i,r)=>{ const ang=-Math.PI/2 + i*2*Math.PI/N; return [cx+Math.cos(ang)*r, cy+Math.sin(ang)*r]; };
+    const rings=[.34,.67,1].map((f,ri)=>h('polygon',{key:'r'+ri,points:this.AREAS.map((_,i)=>pt(i,R*f).join(',')).join(' '),fill:'none',stroke:C.line2,strokeWidth:1}));
+    const axes=this.AREAS.map((_,i)=>{ const [x,y]=pt(i,R); return h('line',{key:'a'+i,x1:cx,y1:cy,x2:x,y2:y,stroke:C.line2,strokeWidth:1}); });
+    const data=this.AREAS.map((a,i)=>pt(i, R*Math.min(1, s.areaLvl[a.id].level/maxLvl)));
+    const labels=this.AREAS.map((a,i)=>{ const [x,y]=pt(i,R+18); return h('circle',{key:'l'+i,cx:x,cy:y,r:11,fill:a.color+'22',stroke:a.color,strokeWidth:1.5}); });
+    const labIcons=this.AREAS.map((a,i)=>{ const [x,y]=pt(i,R+18); return h('foreignObject',{key:'li'+i,x:x-9,y:y-9,width:18,height:18},
+      h('div',{xmlns:'http://www.w3.org/1999/xhtml',style:{display:'grid',placeItems:'center',width:'18px',height:'18px'}}, this.icon(a.icon,13,a.color,true))); });
+    return h('div',{style:{display:'flex',justifyContent:'center'}},
+      h('svg',{viewBox:'0 0 310 300',style:{overflow:'visible',width:'100%',maxWidth:'300px',height:'auto'}},
+        rings, axes,
+        h('polygon',{points:data.map(p=>p.join(',')).join(' '),fill:C.primary+'2E',stroke:C.primary,strokeWidth:2.5,strokeLinejoin:'round'}),
+        data.map((p,i)=>h('circle',{key:'d'+i,cx:p[0],cy:p[1],r:3.5,fill:this.AREAS[i].color})),
+        labels, labIcons
+      )
+    );
+  }
+  renderWeekChart(s){
+    const h=this.h,C=this.C,d=this.state.data;
+    const wks=Object.keys(d.goals).sort().slice(-8);
+    const max=Math.max(1,...wks.map(w=>s.weekXP[w]||0));
+    if(!wks.length || max<=1) return h('div',{style:{color:C.faint,fontSize:'13px',fontWeight:600,padding:'20px 0',textAlign:'center'}},'Aún no hay datos. ¡Completa metas para ver tu evolución!');
+    return h('div',{style:{display:'flex',alignItems:'flex-end',gap:'12px',height:'160px',padding:'8px 0'}},
+      wks.map(w=>{ const v=s.weekXP[w]||0; const hh=Math.max(4,Math.round(v/max*130)); const cur=w===d.currentWeek;
+        return h('div',{key:w,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'6px'}},
+          h('div',{style:{fontFamily:'"Space Grotesk"',fontSize:'12px',fontWeight:700,color:cur?C.primary:C.muted}},v),
+          h('div',{style:{width:'100%',maxWidth:'46px',height:hh+'px',borderRadius:'8px 8px 4px 4px',background:cur?'linear-gradient(180deg,'+C.primary+',#8B5CF6)':C.primarySoft,transition:'height .5s'}}),
+          h('div',{style:{fontSize:'10.5px',fontWeight:600,color:C.faint}},this.parseKey(w).getDate()+'/'+(this.parseKey(w).getMonth()+1))
+        );
+      })
+    );
+  }
+
+  // ---------------- METAS ----------------
+  renderMetas(s){
+    const h=this.h,C=this.C,d=this.state.data;
+    const goals=this.curGoals();
+    const rem=this.renderWeekReminder();
+    return h('div',{},
+      rem?h('div',{style:{marginBottom:'18px'}},rem):null,
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap',marginBottom:'18px'}},
+        h('div',{},
+          this.sectionTitle('Metas de la semana', this.weekLabel(d.currentWeek)),
+        ),
+        h('div',{style:{display:'flex',gap:'9px',flexWrap:'wrap'}},
+          h('button',{onClick:()=>this.setState({view:'historial'}),style:this.ghostBtn()}, this.icon('history',18,C.muted),'Semanas'),
+          h('button',{onClick:()=>this.openGoalForm(),style:this.primaryBtn()}, this.icon('add',19,'#fff'),'Nueva meta')
+        )
+      ),
+      goals.length===0 ? this.emptyMetas() :
+      h('div',{style:{display:'grid',gap:'18px'}},
+        this.AREAS.map(a=>{ const list=goals.filter(g=>g.areaId===a.id); if(!list.length)return null;
+          return h('div',{key:a.id},
+            h('div',{style:{display:'flex',alignItems:'center',gap:'9px',margin:'2px 0 11px'}},
+              h('div',{style:{width:'26px',height:'26px',borderRadius:'8px',background:a.color+'1F',display:'grid',placeItems:'center'}}, this.icon(a.icon,16,a.color,true)),
+              h('h3',{style:{margin:0,fontSize:'15px',fontFamily:'"Space Grotesk"',fontWeight:700}},a.name),
+              h('span',{style:{fontSize:'12px',color:C.faint,fontWeight:600}}, list.length+(list.length===1?' meta':' metas'))
+            ),
+            h('div',{style:{display:'grid',gap:'10px'}}, list.map(g=>this.renderGoalRow(g,a)))
+          );
+        })
+      ),
+      this.renderBadHabits(s)
+    );
+  }
+  renderBadHabits(s){
+    const h=this.h,C=this.C,d=this.state.data; const habits=d.badHabits||[];
+    return h('div',{style:{marginTop:'26px'}},
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap',marginBottom:'12px'}},
+        h('div',{style:{display:'flex',alignItems:'center',gap:'9px'}},
+          h('div',{style:{width:'26px',height:'26px',borderRadius:'8px',background:C.dangerSoft,display:'grid',placeItems:'center'}}, this.icon('heart_broken',16,C.danger,true)),
+          h('h3',{style:{margin:0,fontSize:'15px',fontFamily:'"Space Grotesk"',fontWeight:700}},'Hábitos a evitar'),
+          h('span',{style:{fontSize:'12px',color:C.faint,fontWeight:600}},'roban vida si los haces')),
+        h('button',{onClick:()=>this.openHabitForm(),style:this.ghostBtn()}, this.icon('add',18,C.danger),'Añadir')),
+      habits.length===0 ? h('div',{style:{background:C.card,border:'1px dashed '+C.line2,borderRadius:'14px',padding:'18px',textAlign:'center',color:C.faint,fontWeight:600,fontSize:'13px'}},'Define los hábitos que quieres dejar. Al registrarlos honestamente, tu avatar pierde algo de vida — sin culpa, solo consecuencia.')
+      : h('div',{style:{display:'grid',gridTemplateColumns:this.state.narrow?'1fr':'repeat(auto-fill,minmax(280px,1fr))',gap:'10px'}},
+        habits.map(b=>{ const cnt=this.habitCountWeek(b.id);
+          return h('div',{key:b.id,style:{background:C.card,border:'1px solid '+C.line,borderRadius:'14px',padding:'13px 15px',display:'flex',alignItems:'center',gap:'11px'}},
+            h('div',{style:{width:'38px',height:'38px',borderRadius:'10px',background:C.dangerSoft,display:'grid',placeItems:'center',flexShrink:0}}, this.icon(b.icon||'block',19,C.danger,true)),
+            h('div',{style:{flex:1,minWidth:0}},
+              h('div',{style:{fontWeight:700,fontSize:'13.5px'}},b.name),
+              h('div',{style:{fontSize:'12px',color:C.muted,fontWeight:600,display:'flex',alignItems:'center',gap:'8px'}},
+                h('span',{style:{display:'inline-flex',alignItems:'center',gap:'3px',color:C.danger}}, this.icon('favorite',13,C.danger,true),'−'+b.damage),
+                cnt>0?h('span',{},cnt+(cnt===1?' vez esta semana':' veces esta semana')):h('span',{style:{color:C.green}},'limpio esta semana'))),
+            h('button',{onClick:()=>this.openHabitForm(b),style:{color:C.faint,width:'28px',height:'28px',display:'grid',placeItems:'center'}}, this.icon('edit',16,C.faint)),
+            h('button',{onClick:()=>this.logHabit(b),style:{padding:'8px 13px',borderRadius:'10px',fontWeight:700,fontSize:'12.5px',color:'#fff',background:C.danger,whiteSpace:'nowrap'}},'Lo hice')
+          );
+        })
+      )
+    );
+  }
+  emptyMetas(){ const h=this.h,C=this.C;
+    return this.card([
+      h('div',{style:{textAlign:'center',padding:'22px 10px'}},
+        h('div',{style:{width:'64px',height:'64px',borderRadius:'18px',background:C.primarySoft,display:'grid',placeItems:'center',margin:'0 auto 16px'}}, this.icon('rocket_launch',32,C.primary,true)),
+        h('h3',{style:{margin:'0 0 6px',fontFamily:'"Space Grotesk"',fontSize:'20px'}},'Empieza tu semana'),
+        h('p',{style:{margin:'0 auto 20px',maxWidth:'420px',color:C.muted,fontSize:'14px',fontWeight:500,lineHeight:1.5}},'Crea tus metas por área. Marca cada una como principal (resta XP si no la cumples) o secundaria (solo suma). Tú defines los puntos.'),
+        h('div',{style:{display:'flex',gap:'10px',justifyContent:'center',flexWrap:'wrap'}},
+          h('button',{onClick:()=>this.openGoalForm(),style:this.primaryBtn()}, this.icon('add',19,'#fff'),'Crear meta'),
+          h('button',{onClick:()=>this.importSuggested(),style:this.ghostBtn()}, this.icon('download',18,C.primary),'Cargar mis metas del PDF')
+        )
+      )
+    ]);
+  }
+  renderGoalRow(g,a){
+    const h=this.h,C=this.C; const u=this.goalUnits(g); const done=u.complete;
+    const main=g.priority==='main';
+    return h('div',{key:g.id,style:{background:C.card,border:'1px solid '+(done?a.color+'55':C.line),borderRadius:'15px',padding:'14px 15px',transition:'.2s',boxShadow:done?'0 4px 14px '+a.color+'18':'none'}},
+      h('div',{style:{display:'flex',alignItems:'flex-start',gap:'12px'}},
+        h('div',{style:{flex:1,minWidth:0}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap',marginBottom:'3px'}},
+            h('span',{style:{fontWeight:700,fontSize:'14.5px',color:done?C.muted:C.text,textDecoration:done?'line-through':'none'}},g.title),
+            main
+              ? h('span',{style:{fontSize:'10px',fontWeight:800,letterSpacing:'.5px',color:C.danger,background:C.dangerSoft,padding:'2px 7px',borderRadius:'6px'}},'PRINCIPAL')
+              : h('span',{style:{fontSize:'10px',fontWeight:800,letterSpacing:'.5px',color:C.muted,background:C.line,padding:'2px 7px',borderRadius:'6px'}},'SECUNDARIA'),
+            done?h('span',{style:{display:'inline-flex',alignItems:'center',gap:'3px',fontSize:'11px',fontWeight:700,color:a.color}}, this.icon('check_circle',15,a.color,true),'Completada'):null
+          ),
+          h('div',{style:{display:'flex',alignItems:'center',gap:'12px',fontSize:'12px',color:C.muted,fontWeight:600}},
+            h('span',{style:{display:'inline-flex',alignItems:'center',gap:'4px'}}, this.icon('bolt',14,C.gold,true),'+'+g.xp+' XP'),
+            main&&g.penalty>0?h('span',{style:{display:'inline-flex',alignItems:'center',gap:'4px',color:C.danger}}, this.icon('remove',14,C.danger),g.penalty+' si no cumples'):null,
+            h('span',{},g.type==='daily'?u.done+'/'+u.total+' días':g.type==='count'?u.done+'/'+u.total+' veces':'1 vez')
+          )
+        ),
+        h('button',{onClick:()=>this.openGoalForm(g),style:{width:'30px',height:'30px',borderRadius:'8px',display:'grid',placeItems:'center',color:C.faint,flexShrink:0}}, this.icon('edit',17,C.faint))
+      ),
+      h('div',{style:{marginTop:'12px'}}, this.renderGoalControl(g,a))
+    );
+  }
+  renderGoalControl(g,a){
+    const h=this.h,C=this.C;
+    if(g.type==='daily'){
+      const labels=['L','M','X','J','V','S','D']; g.checks=g.checks||Array(7).fill(false);
+      return h('div',{style:{display:'flex',gap:'7px',flexWrap:'wrap'}},
+        labels.map((lb,i)=>{ const on=g.checks[i];
+          return h('button',{key:i,onClick:()=>this.toggleDay(g,i),
+            style:{width:'42px',height:'42px',borderRadius:'11px',fontWeight:700,fontSize:'14px',fontFamily:'"Space Grotesk"',border:'2px solid '+(on?a.color:C.line2),background:on?a.color:C.card,color:on?'#fff':C.faint,transition:'.15s',boxShadow:on?'0 4px 12px '+a.color+'40':'none'}}, lb);
+        })
+      );
+    }
+    if(g.type==='count'){
+      const c=g.count||0, t=g.target||1; const pct=Math.min(100,Math.round(c/t*100));
+      return h('div',{style:{display:'flex',alignItems:'center',gap:'12px'}},
+        h('button',{onClick:()=>this.incCount(g,-1),disabled:c<=0,style:this.stepBtn(c<=0)}, this.icon('remove',20,c<=0?C.faint:C.text)),
+        h('div',{style:{flex:1}},
+          h('div',{style:{display:'flex',justifyContent:'space-between',fontSize:'12px',fontWeight:700,marginBottom:'4px'}},
+            h('span',{style:{fontFamily:'"Space Grotesk"',color:a.color,fontSize:'16px'}},c+' / '+t),
+            h('span',{style:{color:C.muted}},pct+'%')),
+          h('div',{style:{height:'9px',borderRadius:'6px',background:C.line,overflow:'hidden'}},
+            h('div',{style:{width:pct+'%',height:'100%',background:a.color,borderRadius:'6px',transition:'width .35s'}}))
+        ),
+        h('button',{onClick:()=>this.incCount(g,1),style:this.stepBtn(false,a.color)}, this.icon('add',20,'#fff'))
+      );
+    }
+    // weekly
+    const on=!!g.done;
+    return h('button',{onClick:()=>this.toggleWeekly(g),
+      style:{display:'flex',alignItems:'center',justifyContent:'center',gap:'9px',width:'100%',padding:'12px',borderRadius:'12px',fontWeight:700,fontSize:'14px',border:'2px solid '+(on?a.color:C.line2),background:on?a.color:C.card,color:on?'#fff':C.muted,transition:'.15s'}},
+      this.icon(on?'check_circle':'radio_button_unchecked',20,on?'#fff':C.faint,on), on?'¡Completada!':'Marcar como completada');
+  }
+  stepBtn(dis,bg){ const C=this.C; return {width:'42px',height:'42px',borderRadius:'11px',display:'grid',placeItems:'center',border:'1px solid '+(bg?bg:C.line2),background:bg||C.card,flexShrink:0,opacity:dis?.5:1}; }
+
+  // ---------------- TIENDA ----------------
+  renderTienda(s){
+    const h=this.h,C=this.C,d=this.state.data; const tab=this.state.shopTab||'rewards';
+    const tabBtn=(id,label,ic)=>{ const on=tab===id; return h('button',{key:id,onClick:()=>this.setState({shopTab:id}),
+      style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:'7px',padding:'11px',borderRadius:'12px',fontWeight:700,fontSize:'13.5px',color:on?'#fff':C.muted,background:on?C.primary:'transparent',boxShadow:on?'0 5px 14px '+C.primaryGlow:'none'}}, this.icon(ic,18,on?'#fff':C.faint,on), label); };
+    return h('div',{},
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap',marginBottom:'14px'}},
+        this.sectionTitle('Tienda','Gasta tus monedas en gustos y en curar a tu avatar'),
+        h('button',{onClick:()=>this.openRewardForm(null, tab==='potions'?'potion':'reward'),style:this.primaryBtn()}, this.icon('add',19,'#fff'), tab==='potions'?'Nuevo brebaje':'Nueva recompensa')
+      ),
+      h('div',{style:{display:'flex',alignItems:'center',gap:'10px',background:C.goldSoft,border:'1px solid '+C.gold+'44',borderRadius:'14px',padding:'13px 17px',marginBottom:'16px'}},
+        this.icon('paid',22,C.goldText,true),
+        h('span',{style:{fontWeight:700,color:C.goldText}},'Tienes '),
+        h('span',{style:{fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'20px',color:C.goldText}}, s.coins.toLocaleString('es')),
+        h('span',{style:{fontWeight:700,color:C.goldText}},' monedas')),
+      h('div',{style:{display:'flex',gap:'6px',padding:'4px',background:C.card,border:'1px solid '+C.line,borderRadius:'14px',marginBottom:'20px'}},
+        tabBtn('rewards','Recompensas','storefront'), tabBtn('potions','Botica de brebajes','local_pharmacy')),
+      tab==='potions' ? this.renderPotions(s) : this.renderRewards(s),
+      (d.claims&&d.claims.length)?h('div',{style:{marginTop:'26px'}},
+        this.sectionTitle('Historial de gastos'),
+        h('div',{style:{display:'grid',gap:'8px'}},
+          d.claims.slice().reverse().slice(0,12).map(c=>h('div',{key:c.id,style:{display:'flex',alignItems:'center',gap:'11px',background:C.card,border:'1px solid '+C.line,borderRadius:'12px',padding:'11px 15px'}},
+            this.icon(c.type==='potion'?'local_drink':'redeem',18,c.type==='potion'?C.green:C.gold,true),
+            h('span',{style:{fontWeight:600,fontSize:'13.5px',flex:1}},c.name),
+            h('span',{style:{fontSize:'12px',color:C.faint,fontWeight:600}},c.date),
+            h('span',{style:{fontFamily:'"Space Grotesk"',fontWeight:700,color:C.danger,fontSize:'13px'}},'−'+c.cost)
+          ))
+        )
+      ):null
+    );
+  }
+  renderRewards(s){
+    const h=this.h,C=this.C,d=this.state.data;
+    return h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'14px'}},
+      d.rewards.map(r=>{ const ml=r.minLevel||1; const locked=s.level<ml; const can=!locked && s.coins>=r.cost;
+        return h('div',{key:r.id,style:{background:C.card,border:'1px solid '+C.line,borderRadius:'17px',padding:'18px',display:'flex',flexDirection:'column',gap:'12px',position:'relative',opacity:locked?.7:1}},
+          h('button',{onClick:()=>this.openRewardForm(r,'reward'),style:{position:'absolute',right:'12px',top:'12px',color:C.faint}}, this.icon('edit',17,C.faint)),
+          h('div',{style:{width:'50px',height:'50px',borderRadius:'14px',background:C.goldSoft,display:'grid',placeItems:'center'}}, this.icon(r.icon||'redeem',26,C.gold,true)),
+          h('div',{style:{fontWeight:700,fontSize:'15.5px',lineHeight:1.25}},r.name),
+          ml>1?h('div',{style:{display:'inline-flex',alignItems:'center',gap:'4px',fontSize:'11px',fontWeight:700,color:locked?C.danger:C.muted}}, this.icon(locked?'lock':'lock_open',14,locked?C.danger:C.muted), 'Nivel '+ml+(locked?' para desbloquear':'')):null,
+          h('div',{style:{marginTop:'auto',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'10px'}},
+            h('span',{style:{display:'inline-flex',alignItems:'center',gap:'4px',fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'18px',color:C.goldText}}, this.icon('paid',18,C.gold,true), r.cost),
+            h('button',{onClick:()=>this.claimReward(r),disabled:!can,
+              style:{padding:'9px 15px',borderRadius:'11px',fontWeight:700,fontSize:'13px',color:can?'#fff':C.faint,background:can?'linear-gradient(135deg,'+C.gold+',#F5B93D)':C.line,cursor:can?'pointer':'not-allowed'}}, locked?'Bloqueado':(can?'Reclamar':'Faltan monedas'))
+          )
+        );
+      })
+    );
+  }
+  renderPotions(s){
+    const h=this.h,C=this.C,d=this.state.data; const full=s.hp>=s.maxHP;
+    return h('div',{},
+      full?h('div',{style:{display:'flex',alignItems:'center',gap:'10px',background:C.greenSoft,border:'1px solid '+C.green+'44',borderRadius:'13px',padding:'12px 16px',marginBottom:'16px'}},
+        this.icon('favorite',20,C.green,true), h('span',{style:{fontWeight:600,fontSize:'13.5px',color:C.greenText}},'Tu avatar está con la vida al máximo ('+s.hp+'/'+s.maxHP+'). No necesitas brebajes por ahora.')):null,
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'14px'}},
+        (d.potions||[]).map(p=>{ const can=!full && s.coins>=p.cost;
+          return h('div',{key:p.id,style:{background:C.card,border:'1px solid '+C.line,borderRadius:'17px',padding:'18px',display:'flex',flexDirection:'column',gap:'12px',position:'relative'}},
+            h('button',{onClick:()=>this.openRewardForm(p,'potion'),style:{position:'absolute',right:'12px',top:'12px',color:C.faint}}, this.icon('edit',17,C.faint)),
+            h('div',{style:{width:'50px',height:'50px',borderRadius:'14px',background:C.greenSoft,display:'grid',placeItems:'center'}}, this.icon(p.icon||'local_drink',26,C.green,true)),
+            h('div',{style:{fontWeight:700,fontSize:'15.5px',lineHeight:1.25}},p.name),
+            h('div',{style:{display:'inline-flex',alignItems:'center',gap:'4px',fontSize:'12.5px',fontWeight:700,color:C.green}}, this.icon('favorite',15,C.green,true), p.heal>=9999?'Cura total':'+'+p.heal+' de vida'),
+            h('div',{style:{marginTop:'auto',display:'flex',alignItems:'center',justifyContent:'space-between',gap:'10px'}},
+              h('span',{style:{display:'inline-flex',alignItems:'center',gap:'4px',fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'18px',color:C.goldText}}, this.icon('paid',18,C.gold,true), p.cost),
+              h('button',{onClick:()=>this.buyPotion(p),disabled:!can,
+                style:{padding:'9px 15px',borderRadius:'11px',fontWeight:700,fontSize:'13px',color:can?'#fff':C.faint,background:can?'linear-gradient(135deg,'+C.green+',#3FC28E)':C.line,cursor:can?'pointer':'not-allowed'}}, full?'Vida llena':(can?'Curar':'Faltan monedas'))
+            )
+          );
+        })
+      )
+    );
+  }
+
+  // ---------------- LOGROS ----------------
+  renderLogros(s){
+    const h=this.h,C=this.C,d=this.state.data;
+    const custom=d.customAch||[];
+    const unlocked=this.ACH.filter(a=>d.achievements[a.id]).length + custom.filter(c=>c.unlocked).length;
+    const total=this.ACH.length+custom.length;
+    const achCard=(icon,name,desc,on,cur,tgt,onEdit)=>{ const pct=Math.round(Math.min(cur,tgt)/tgt*100);
+      return h('div',{key:name+tgt,style:{position:'relative',background:on?C.goldSoft:C.card,border:'1px solid '+(on?C.gold+'55':C.line),borderRadius:'16px',padding:'16px',display:'flex',gap:'13px',opacity:on?1:.92}},
+        onEdit?h('button',{onClick:onEdit,style:{position:'absolute',right:'10px',top:'10px',color:C.faint}}, this.icon('edit',15,C.faint)):null,
+        h('div',{style:{width:'46px',height:'46px',borderRadius:'13px',display:'grid',placeItems:'center',flexShrink:0,background:on?'linear-gradient(135deg,'+C.gold+',#F5B93D)':C.line,boxShadow:on?'0 6px 16px rgba(233,153,10,.35)':'none'}},
+          this.icon(on?icon:'lock',24,on?'#fff':C.faint,true)),
+        h('div',{style:{flex:1,minWidth:0}},
+          h('div',{style:{fontWeight:700,fontSize:'14.5px',color:on?C.goldText:C.text,paddingRight:onEdit?'18px':0}},name),
+          h('div',{style:{fontSize:'12px',color:C.muted,fontWeight:500,marginBottom:'7px',lineHeight:1.35}},desc),
+          on?h('div',{style:{fontSize:'11px',fontWeight:700,color:C.gold,display:'inline-flex',alignItems:'center',gap:'4px'}}, this.icon('check',14,C.gold),'Desbloqueado'):
+            h('div',{},
+              h('div',{style:{height:'6px',borderRadius:'4px',background:C.line,overflow:'hidden'}}, h('div',{style:{width:pct+'%',height:'100%',background:C.faint,borderRadius:'4px'}})),
+              h('div',{style:{fontSize:'11px',color:C.faint,fontWeight:700,marginTop:'4px'}},cur+' / '+tgt)
+            )
+        )
+      );
+    };
+    return h('div',{},
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap'}},
+        this.sectionTitle('Logros', unlocked+' de '+total+' desbloqueados'),
+        h('button',{onClick:()=>this.openAchForm(),style:this.primaryBtn()}, this.icon('add',19,'#fff'),'Nuevo logro')),
+      h('div',{style:{height:'9px',borderRadius:'6px',background:C.line,overflow:'hidden',margin:'6px 0 22px'}},
+        h('div',{style:{width:Math.round(unlocked/total*100)+'%',height:'100%',background:'linear-gradient(90deg,'+C.gold+',#F5B93D)',borderRadius:'6px',transition:'width .5s'}})),
+      custom.length?h('div',{style:{marginBottom:'22px'}},
+        h('div',{style:{fontSize:'12px',fontWeight:800,color:C.muted,textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'12px'}},'Tus logros personalizados'),
+        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'13px'}},
+          custom.map(c=>{ const cur=this.customValue(c,s);
+            return achCard(c.icon, c.name, this.metricLabel(c.metric)+(c.metric==='goal'?' · '+c.goalTitle:''), !!c.unlocked, cur, c.target, ()=>this.openAchForm(c)); }))
+      ):null,
+      custom.length?h('div',{style:{fontSize:'12px',fontWeight:800,color:C.muted,textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'12px'}},'Logros del sistema'):null,
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'13px'}},
+        this.ACH.map(a=>{ const on=!!d.achievements[a.id];
+          return achCard(a.icon, a.name, a.desc, on, Math.min(a.tgt(s),a.cur(s)), a.tgt(s), null); })
+      )
+    );
+  }
+
+  // ---------------- AJEDREZ ----------------
+  renderAjedrez(s){
+    const h=this.h,C=this.C,d=this.state.data;
+    const days=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+    const ti=this.todayIdx();
+    const cd=this.state.chessDraft;
+    const wkStart=d.currentWeek;
+    const weekMin=(d.chess.logs||[]).filter(l=>l.date>=wkStart && l.date<=this.addDays(wkStart,6)).reduce((a,l)=>a+(+l.minutes||0),0);
+    const weekGames=(d.chess.logs||[]).filter(l=>l.date>=wkStart && l.date<=this.addDays(wkStart,6)).reduce((a,l)=>a+(+l.games||0),0);
+    return h('div',{},
+      this.sectionTitle('Estudio de ajedrez','Plan semanal y registro diario de partidas'),
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:'12px',margin:'16px 0'}},
+        this.statTile('sports_esports','Partidas totales', s.chessGames, C.blue, C.blueSoft,'Registradas'),
+        this.statTile('timer','Estudio total', Math.floor(s.chessMin/60)+'h '+(s.chessMin%60)+'m', C.primary, C.primarySoft,'Acumulado'),
+        this.statTile('calendar_today','Esta semana', weekGames+' part.', C.green, C.greenSoft, weekMin+' min')
+      ),
+      h('div',{style:{display:'grid',gridTemplateColumns:this.col2('1.1fr 1fr'),gap:'18px'}},
+        // plan
+        this.card([
+          this.sectionTitle('Plan semanal','Toca para editar cada tema'),
+          h('div',{style:{display:'grid',gap:'8px'}},
+            days.map((dn,i)=>{ const today=i===ti;
+              return h('div',{key:i,style:{display:'flex',alignItems:'center',gap:'11px',padding:'9px 11px',borderRadius:'11px',background:today?C.primarySoft:'transparent',border:'1px solid '+(today?C.primary+'44':'transparent')}},
+                h('span',{style:{width:'86px',fontWeight:700,fontSize:'13px',color:today?C.primaryD:C.muted}},dn),
+                h('input',{value:d.chessPlan[i]||'',onChange:e=>this.setPlan(i,e.target.value),
+                  style:{flex:1,border:'none',background:'transparent',fontSize:'14px',fontWeight:600,color:C.text,outline:'none',borderBottom:'1px solid '+C.line,padding:'3px 2px'}}),
+                today?h('span',{style:{fontSize:'10px',fontWeight:800,color:C.primary,background:'#fff',padding:'3px 7px',borderRadius:'6px'}},'HOY'):null
+              );
+            })
+          )
+        ]),
+        // log form
+        this.card([
+          this.sectionTitle('Registrar hoy', days[ti]+' · '+(d.chessPlan[ti]||'')),
+          h('div',{style:{display:'grid',gap:'12px'}},
+            h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}},
+              this.field('Partidas jugadas', h('input',{type:'number',min:0,value:cd.games,onChange:e=>this.setState({chessDraft:{...cd,games:e.target.value}}),style:this.inp()})),
+              this.field('Minutos de estudio', h('input',{type:'number',min:0,value:cd.minutes,onChange:e=>this.setState({chessDraft:{...cd,minutes:e.target.value}}),style:this.inp()}))
+            ),
+            this.field('Resultado (opcional)', h('div',{style:{display:'flex',gap:'7px'}},
+              [['','—'],['win','Victoria'],['draw','Tablas'],['loss','Derrota']].map(([v,lb])=>{ const on=cd.result===v;
+                return h('button',{key:v,onClick:()=>this.setState({chessDraft:{...cd,result:v}}),
+                  style:{flex:1,padding:'9px 4px',borderRadius:'9px',fontWeight:700,fontSize:'12.5px',border:'1px solid '+(on?C.primary:C.line2),background:on?C.primarySoft:C.card,color:on?C.primaryD:C.muted}},lb);
+              }))),
+            this.field('Notas / análisis (opcional)', h('textarea',{rows:2,value:cd.notes,placeholder:'Qué aprendí, errores...',onChange:e=>this.setState({chessDraft:{...cd,notes:e.target.value}}),style:this.inp()})),
+            h('button',{onClick:()=>this.addChessLog(),style:{...this.primaryBtn(),justifyContent:'center',width:'100%'}}, this.icon('add',19,'#fff'),'Guardar registro (+XP)')
+          )
+        ])
+      ),
+      (d.chess.logs&&d.chess.logs.length)?h('div',{style:{marginTop:'22px'}},
+        this.sectionTitle('Historial de partidas'),
+        h('div',{style:{display:'grid',gap:'8px'}},
+          d.chess.logs.slice(0,20).map(l=>h('div',{key:l.id,style:{display:'flex',alignItems:'center',gap:'12px',background:C.card,border:'1px solid '+C.line,borderRadius:'12px',padding:'11px 15px'}},
+            h('div',{style:{width:'38px',height:'38px',borderRadius:'10px',background:C.primarySoft,display:'grid',placeItems:'center',flexShrink:0}}, this.icon('chess',18,C.primary,true)),
+            h('div',{style:{flex:1,minWidth:0}},
+              h('div',{style:{fontWeight:700,fontSize:'13.5px'}},l.theme||'Ajedrez'),
+              h('div',{style:{fontSize:'12px',color:C.muted,fontWeight:600}},l.date+' · '+(l.games||0)+' part. · '+(l.minutes||0)+' min'+(l.result?' · '+({win:'Victoria',draw:'Tablas',loss:'Derrota'}[l.result]||''):'')),
+              l.notes?h('div',{style:{fontSize:'12px',color:C.faint,fontWeight:500,marginTop:'2px',fontStyle:'italic'}},l.notes):null
+            ),
+            h('button',{onClick:()=>this.delChessLog(l.id),style:{color:C.faint}}, this.icon('delete',17,C.faint))
+          ))
+        )
+      ):null
+    );
+  }
+
+  // ---------------- REVISION ----------------
+  renderRevision(s){
+    const h=this.h,C=this.C,d=this.state.data;
+    const wk=d.currentWeek; const r=d.reviews[wk]||{};
+    const answered=this.REVIEW_QS.filter(q=>(r[q.k]||'').trim()).length;
+    const done=r.done;
+    return h('div',{},
+      this.sectionTitle('Revisión dominical', this.weekLabel(wk)),
+      h('div',{style:{display:'flex',alignItems:'center',gap:'11px',background:done?C.greenSoft:C.primarySoft,border:'1px solid '+(done?C.green+'44':C.primary+'33'),borderRadius:'14px',padding:'13px 17px',margin:'6px 0 20px'}},
+        this.icon(done?'task_alt':'self_improvement',22,done?C.green:C.primary,true),
+        h('span',{style:{fontWeight:600,fontSize:'13.5px',color:done?C.greenText:C.primaryD}},
+          done?'Revisión completada — +60 XP ganados. Puedes seguir editándola.':'Responde con honestidad y gánate 60 XP al guardar. Es tu momento de reflexión, no de culpa.')
+      ),
+      h('div',{style:{display:'grid',gap:'14px'}},
+        this.REVIEW_QS.map((q,i)=>h('div',{key:q.k,style:{background:C.card,border:'1px solid '+C.line,borderRadius:'15px',padding:'16px'}},
+          h('label',{style:{display:'flex',gap:'9px',alignItems:'flex-start',marginBottom:'9px',fontWeight:700,fontSize:'14.5px'}},
+            h('span',{style:{width:'24px',height:'24px',borderRadius:'8px',background:C.primarySoft,color:C.primaryD,display:'grid',placeItems:'center',fontSize:'12px',fontFamily:'"Space Grotesk"',flexShrink:0}},i+1),
+            q.q),
+          h('textarea',{rows:2,value:r[q.k]||'',placeholder:'Escribe aquí...',onChange:e=>this.setReview(wk,q.k,e.target.value),style:{...this.inp(),width:'100%'}})
+        )),
+        h('button',{onClick:()=>this.finishReview(wk),disabled:answered<3,
+          style:{...this.primaryBtn(),justifyContent:'center',opacity:answered<3?.5:1,cursor:answered<3?'not-allowed':'pointer'}},
+          this.icon('check_circle',19,'#fff',true), done?'Revisión guardada':(answered<3?'Responde al menos 3 preguntas':'Completar revisión (+60 XP)'))
+      )
+    );
+  }
+
+  // ---------------- HISTORIAL ----------------
+  renderHistorial(s){
+    const h=this.h,C=this.C,d=this.state.data;
+    const wks=Object.keys(d.goals).sort().reverse();
+    if(this.state.histWeek) return this.renderWeekDetail(this.state.histWeek,s);
+    return h('div',{},
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap',marginBottom:'18px'}},
+        this.sectionTitle('Historial semanal','Revisa y compara tu progreso'),
+        h('div',{style:{display:'flex',gap:'9px'}},
+          h('button',{onClick:()=>this.startNewWeek(true),style:this.ghostBtn()}, this.icon('content_copy',18,C.primary),'Repetir metas'),
+          h('button',{onClick:()=>this.startNewWeek(false),style:this.primaryBtn()}, this.icon('add',19,'#fff'),'Nueva semana')
+        )
+      ),
+      h('div',{style:{display:'grid',gap:'11px'}},
+        wks.map(wk=>{ const cur=wk===d.currentWeek; const pct=s.weekPct[wk]||0; const xp=s.weekXP[wk]||0; const goals=d.goals[wk]||[];
+          const rev=d.reviews[wk]&&d.reviews[wk].done;
+          return h('div',{key:wk,onClick:()=>this.setState({histWeek:wk}),
+            style:{display:'flex',alignItems:'center',gap:'15px',background:C.card,border:'1px solid '+(cur?C.primary+'55':C.line),borderRadius:'15px',padding:'15px 18px',cursor:'pointer',transition:'.15s'}},
+            h('div',{style:{width:'52px',height:'52px',borderRadius:'50%',flexShrink:0,background:'conic-gradient('+C.primary+' '+(pct*3.6)+'deg,'+C.line+' 0)',display:'grid',placeItems:'center'}},
+              h('div',{style:{width:'40px',height:'40px',borderRadius:'50%',background:C.card,display:'grid',placeItems:'center',fontFamily:'"Space Grotesk"',fontWeight:700,fontSize:'13px',color:C.primaryD}},pct+'%')),
+            h('div',{style:{flex:1,minWidth:0}},
+              h('div',{style:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}},
+                h('span',{style:{fontWeight:700,fontSize:'14.5px'}},this.weekLabel(wk)),
+                cur?h('span',{style:{fontSize:'10px',fontWeight:800,color:'#fff',background:C.primary,padding:'2px 7px',borderRadius:'6px'}},'ACTUAL'):null,
+                rev?this.icon('auto_stories',16,C.green,true):null),
+              h('div',{style:{fontSize:'12.5px',color:C.muted,fontWeight:600,marginTop:'2px'}},goals.length+' metas · '+xp+' XP ganado')
+            ),
+            this.icon('chevron_right',22,C.faint)
+          );
+        })
+      )
+    );
+  }
+  renderWeekDetail(wk,s){
+    const h=this.h,C=this.C,d=this.state.data; const goals=d.goals[wk]||[]; const cur=wk===d.currentWeek;
+    const rev=d.reviews[wk];
+    let lost=0; goals.forEach(g=>{ const u=this.goalUnits(g); if(g.priority==='main'&&!u.complete)lost+=g.penalty||0; });
+    return h('div',{},
+      h('button',{onClick:()=>this.setState({histWeek:null}),style:{...this.ghostBtn(),marginBottom:'16px'}}, this.icon('arrow_back',18,C.primary),'Volver'),
+      this.sectionTitle('Semana '+this.weekLabel(wk)),
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'12px',margin:'14px 0'}},
+        this.statTile('check_circle','Cumplimiento',(s.weekPct[wk]||0)+'%',C.greenText,C.greenSoft),
+        this.statTile('bolt','XP ganado',s.weekXP[wk]||0,C.primary,C.primarySoft),
+        this.statTile('trending_down',cur?'XP en riesgo':'XP perdido',(cur?'−':'−')+lost,C.danger,C.dangerSoft, cur?'Aún recuperable':'Metas principales')
+      ),
+      cur?h('div',{style:{display:'flex',gap:'9px',flexWrap:'wrap',marginBottom:'18px'}},
+        h('button',{onClick:()=>this.gotoWeek(wk),style:this.primaryBtn()}, this.icon('edit',18,'#fff'),'Editar esta semana')
+      ):h('div',{style:{marginBottom:'18px'}},
+        h('button',{onClick:()=>this.gotoWeek(wk),style:this.ghostBtn()}, this.icon('open_in_full',18,C.primary),'Abrir esta semana')
+      ),
+      goals.length?h('div',{style:{display:'grid',gap:'8px',marginBottom:'20px'}},
+        goals.map(g=>{ const u=this.goalUnits(g); const a=this.area(g.areaId);
+          return h('div',{key:g.id,style:{display:'flex',alignItems:'center',gap:'11px',background:C.card,border:'1px solid '+C.line,borderRadius:'12px',padding:'11px 15px'}},
+            this.icon(u.complete?'check_circle':'radio_button_unchecked',19,u.complete?a.color:C.faint,u.complete),
+            h('span',{style:{flex:1,fontWeight:600,fontSize:'13.5px',color:u.complete?C.text:C.muted}},g.title),
+            h('span',{style:{fontSize:'12px',color:C.faint,fontWeight:700}},g.type==='daily'?u.done+'/'+u.total+'d':g.type==='count'?u.done+'/'+u.total:'—')
+          );
+        })
+      ):h('p',{style:{color:C.faint,fontWeight:600}},'Sin metas esta semana.'),
+      rev&&rev.done?this.card([
+        this.sectionTitle('Reflexión de la semana'),
+        h('div',{style:{display:'grid',gap:'12px'}},
+          this.REVIEW_QS.filter(q=>(rev[q.k]||'').trim()).map(q=>h('div',{key:q.k},
+            h('div',{style:{fontWeight:700,fontSize:'13px',color:C.primaryD,marginBottom:'3px'}},q.q),
+            h('div',{style:{fontSize:'13.5px',color:C.text,fontWeight:500,lineHeight:1.45}},rev[q.k])
+          ))
+        )
+      ]):null
+    );
+  }
+
+  // ---------------- MODALS + FORM HELPERS ----------------
+  openGoalForm(g){
+    this.setState({goalForm: g?{...g,targetDays:g.targetDays||7,target:g.target||3,penalty:g.penalty||0}:
+      {areaId:'esp',title:'',priority:'main',type:'daily',xp:10,penalty:6,targetDays:7,target:3}});
+  }
+  openRewardForm(r){ this.setState({rewardForm: r?{...r}:{name:'',cost:100,icon:'redeem'}}); }
+
+  overlay(children,onClose){ const h=this.h,C=this.C;
+    return h('div',{onClick:onClose,style:{position:'fixed',inset:0,background:'rgba(30,27,51,.45)',backdropFilter:'blur(3px)',zIndex:9998,display:'grid',placeItems:'center',padding:'20px',animation:'fadein .15s ease'}},
+      h('div',{onClick:e=>e.stopPropagation(),style:{background:C.card,borderRadius:'22px',padding:'24px',width:'100%',maxWidth:'480px',maxHeight:'90vh',overflowY:'auto',boxShadow:'0 30px 80px rgba(0,0,0,.3)',animation:'popin .2s ease'}}, children));
+  }
+  renderGoalModal(){
+    const h=this.h,C=this.C,f=this.state.goalForm; const set=(k,v)=>this.setState({goalForm:{...f,[k]:v}});
+    const valid=f.title.trim().length>0;
+    return this.overlay([
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'18px'}},
+        h('h3',{style:{margin:0,fontFamily:'"Space Grotesk"',fontSize:'19px'}}, f.id?'Editar meta':'Nueva meta'),
+        h('button',{onClick:()=>this.setState({goalForm:null}),style:{color:C.faint}}, this.icon('close',22,C.faint))),
+      h('div',{style:{display:'grid',gap:'15px'}},
+        this.field('Área', h('select',{value:f.areaId,onChange:e=>set('areaId',e.target.value),style:this.inp()}, this.AREAS.map(a=>h('option',{key:a.id,value:a.id},a.name)))),
+        this.field('Descripción de la meta', h('input',{value:f.title,autoFocus:true,placeholder:'Ej: Leer 20 páginas al día',onChange:e=>set('title',e.target.value),style:this.inp()})),
+        this.field('Tipo de meta', h('div',{style:{display:'flex',gap:'7px'}},
+          [['main','Principal','Resta XP si no la cumples'],['side','Secundaria','Solo suma, nunca resta']].map(([v,lb,dsc])=>{ const on=f.priority===v;
+            return h('button',{key:v,onClick:()=>set('priority',v),style:{flex:1,textAlign:'left',padding:'11px 13px',borderRadius:'12px',border:'2px solid '+(on?(v==='main'?C.danger:C.primary):C.line2),background:on?(v==='main'?C.dangerSoft:C.primarySoft):C.card}},
+              h('div',{style:{fontWeight:700,fontSize:'13.5px',color:on?(v==='main'?C.danger:C.primaryD):C.text}},lb),
+              h('div',{style:{fontSize:'11px',color:C.muted,fontWeight:500,marginTop:'1px'}},dsc));
+          }))),
+        this.field('Frecuencia', h('div',{style:{display:'flex',gap:'7px'}},
+          [['daily','Diaria'],['count','Por cantidad'],['weekly','Una vez']].map(([v,lb])=>{ const on=f.type===v;
+            return h('button',{key:v,onClick:()=>set('type',v),style:{flex:1,padding:'10px 4px',borderRadius:'11px',fontWeight:700,fontSize:'13px',border:'1px solid '+(on?C.primary:C.line2),background:on?C.primarySoft:C.card,color:on?C.primaryD:C.muted}},lb);
+          }))),
+        f.type==='daily'?this.field('¿Cuántos días a la semana? (meta)', h('input',{type:'number',min:1,max:7,value:f.targetDays,onChange:e=>set('targetDays',e.target.value),style:this.inp()})):null,
+        f.type==='count'?this.field('¿Cuántas veces en la semana? (meta)', h('input',{type:'number',min:1,value:f.target,onChange:e=>set('target',e.target.value),style:this.inp()})):null,
+        h('div',{style:{display:'grid',gridTemplateColumns: f.priority==='main'?'1fr 1fr':'1fr',gap:'12px'}},
+          this.field('XP al completar'+(f.type!=='weekly'?' (por vez)':''), h('input',{type:'number',min:0,value:f.xp,onChange:e=>set('xp',e.target.value),style:this.inp()})),
+          f.priority==='main'?this.field('XP de penalización', h('input',{type:'number',min:0,value:f.penalty,onChange:e=>set('penalty',e.target.value),style:{...this.inp(),borderColor:C.danger+'55'}})):null
+        ),
+        h('div',{style:{display:'flex',gap:'10px',marginTop:'4px'}},
+          f.id?h('button',{onClick:()=>this.deleteGoal(f.id),style:{...this.ghostBtn(),color:C.danger,borderColor:C.dangerSoft}}, this.icon('delete',18,C.danger),'Eliminar'):null,
+          h('button',{onClick:()=>valid&&this.saveGoal(f),disabled:!valid,style:{...this.primaryBtn(),flex:1,justifyContent:'center',opacity:valid?1:.5}}, this.icon('check',19,'#fff'), f.id?'Guardar cambios':'Crear meta')
+        )
+      )
+    ], ()=>this.setState({goalForm:null}));
+  }
+  renderRewardModal(){
+    const h=this.h,C=this.C,f=this.state.rewardForm; const set=(k,v)=>this.setState({rewardForm:{...f,[k]:v}});
+    const pot=f.kind==='potion';
+    const icons= pot? ['local_drink','science','auto_awesome','healing','medication','water_drop','spa','bolt']
+      : ['redeem','cake','sports_esports','movie','restaurant','menu_book','shopping_bag','coffee','icecream','celebration','spa','music_note','flight','sports_soccer'];
+    const valid=f.name.trim().length>0;
+    return this.overlay([
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'18px'}},
+        h('h3',{style:{margin:0,fontFamily:'"Space Grotesk"',fontSize:'19px'}}, (f.id?'Editar ':'Nuevo ')+(pot?'brebaje':'recompensa')),
+        h('button',{onClick:()=>this.setState({rewardForm:null}),style:{color:C.faint}}, this.icon('close',22,C.faint))),
+      h('div',{style:{display:'grid',gap:'15px'}},
+        this.field(pot?'Nombre del brebaje':'¿Qué gusto te darás?', h('input',{value:f.name,autoFocus:true,placeholder:pot?'Ej: Poción revitalizante':'Ej: Comer un helado',onChange:e=>set('name',e.target.value),style:this.inp()})),
+        h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}},
+          this.field('Costo en monedas', h('input',{type:'number',min:0,value:f.cost,onChange:e=>set('cost',e.target.value),style:this.inp()})),
+          pot? this.field('Vida que cura', h('input',{type:'number',min:1,value:f.heal,onChange:e=>set('heal',e.target.value),style:{...this.inp(),borderColor:C.green+'55'}}))
+             : this.field('Nivel para desbloquear', h('input',{type:'number',min:1,value:f.minLevel,onChange:e=>set('minLevel',e.target.value),style:this.inp()}))
+        ),
+        this.field('Ícono', h('div',{style:{display:'flex',flexWrap:'wrap',gap:'7px'}},
+          icons.map(ic=>{ const on=f.icon===ic;
+            return h('button',{key:ic,onClick:()=>set('icon',ic),style:{width:'42px',height:'42px',borderRadius:'11px',display:'grid',placeItems:'center',border:'2px solid '+(on?(pot?C.green:C.gold):C.line2),background:on?(pot?C.greenSoft:C.goldSoft):C.card}}, this.icon(ic,20,on?(pot?C.green:C.gold):C.muted,on));
+          }))),
+        h('div',{style:{display:'flex',gap:'10px',marginTop:'4px'}},
+          f.id?h('button',{onClick:()=>this.deleteReward(f.id),style:{...this.ghostBtn(),color:C.danger,borderColor:C.dangerSoft}}, this.icon('delete',18,C.danger),'Eliminar'):null,
+          h('button',{onClick:()=>valid&&this.saveReward(f),disabled:!valid,style:{...this.primaryBtn(),flex:1,justifyContent:'center',opacity:valid?1:.5}}, this.icon('check',19,'#fff'), f.id?'Guardar':(pot?'Crear brebaje':'Crear recompensa'))
+        )
+      )
+    ], ()=>this.setState({rewardForm:null}));
+  }
+  renderHabitModal(){
+    const h=this.h,C=this.C,f=this.state.habitForm; const set=(k,v)=>this.setState({habitForm:{...f,[k]:v}});
+    const icons=['block','money_off','no_food','bedtime_off','hourglass_disabled','mobile_off','smoking_rooms','sentiment_stressed','local_bar','fastfood'];
+    const valid=f.name.trim().length>0;
+    return this.overlay([
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'18px'}},
+        h('h3',{style:{margin:0,fontFamily:'"Space Grotesk"',fontSize:'19px'}}, f.id?'Editar hábito':'Hábito a evitar'),
+        h('button',{onClick:()=>this.setState({habitForm:null}),style:{color:C.faint}}, this.icon('close',22,C.faint))),
+      h('div',{style:{display:'grid',gap:'15px'}},
+        this.field('¿Qué quieres evitar?', h('input',{value:f.name,autoFocus:true,placeholder:'Ej: Comer azúcar de noche',onChange:e=>set('name',e.target.value),style:this.inp()})),
+        this.field('Vida que roba cada vez que lo haces', h('input',{type:'number',min:0,value:f.damage,onChange:e=>set('damage',e.target.value),style:{...this.inp(),borderColor:C.danger+'55'}})),
+        this.field('Ícono', h('div',{style:{display:'flex',flexWrap:'wrap',gap:'7px'}},
+          icons.map(ic=>{ const on=f.icon===ic;
+            return h('button',{key:ic,onClick:()=>set('icon',ic),style:{width:'42px',height:'42px',borderRadius:'11px',display:'grid',placeItems:'center',border:'2px solid '+(on?C.danger:C.line2),background:on?C.dangerSoft:C.card}}, this.icon(ic,20,on?C.danger:C.muted,on));
+          }))),
+        h('div',{style:{fontSize:'12px',color:C.faint,fontWeight:600,lineHeight:1.4}},'No da culpa: solo registra con honestidad. Cuando caigas, tu avatar pierde algo de vida; puedes recuperarla cumpliendo metas y con brebajes.'),
+        h('div',{style:{display:'flex',gap:'10px',marginTop:'4px'}},
+          f.id?h('button',{onClick:()=>this.deleteHabit(f.id),style:{...this.ghostBtn(),color:C.danger,borderColor:C.dangerSoft}}, this.icon('delete',18,C.danger),'Eliminar'):null,
+          h('button',{onClick:()=>valid&&this.saveHabit(f),disabled:!valid,style:{...this.primaryBtn(),flex:1,justifyContent:'center',opacity:valid?1:.5}}, this.icon('check',19,'#fff'), f.id?'Guardar':'Crear hábito')
+        )
+      )
+    ], ()=>this.setState({habitForm:null}));
+  }
+
+  renderSettingsModal(){
+    const h=this.h,C=this.C,d=this.state.data;
+    const sec=(title,children)=>h('div',{style:{marginBottom:'20px'}},
+      h('div',{style:{fontSize:'12px',fontWeight:800,color:C.muted,textTransform:'uppercase',letterSpacing:'.6px',marginBottom:'10px'}},title), children);
+    return this.overlay([
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px'}},
+        h('h3',{style:{margin:0,fontFamily:'"Space Grotesk"',fontSize:'19px'}},'Ajustes'),
+        h('button',{onClick:()=>this.setState({settings:false}),style:{color:C.faint}}, this.icon('close',22,C.faint))),
+      sec('Respaldo de tu progreso', h('div',{},
+        h('p',{style:{margin:'0 0 12px',fontSize:'13px',color:C.muted,fontWeight:500,lineHeight:1.5}},'Tus datos se guardan en este navegador. Descarga una copia para no perder tu progreso si cambias de equipo o borras datos.'),
+        h('div',{style:{display:'flex',gap:'10px',flexWrap:'wrap'}},
+          h('button',{onClick:()=>this.exportData(),style:this.primaryBtn()}, this.icon('download',18,'#fff'),'Exportar copia'),
+          h('label',{style:{...this.ghostBtn(),cursor:'pointer'}}, this.icon('upload',18,C.primary),'Importar copia',
+            h('input',{type:'file',accept:'application/json,.json',style:{display:'none'},onChange:e=>{ this.importData(e.target.files[0]); e.target.value=''; }}))
+        ))),
+      sec('Apariencia', h('div',{style:{display:'flex',gap:'8px'}},
+        [['light','Claro','light_mode'],['dark','Oscuro','dark_mode']].map(([v,lb,ic])=>{ const on=(d.theme||'light')===v;
+          return h('button',{key:v,onClick:()=>{ if(!on)this.toggleTheme(); },style:{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:'7px',padding:'12px',borderRadius:'12px',fontWeight:700,fontSize:'13.5px',border:'2px solid '+(on?C.primary:C.line2),background:on?C.primarySoft:C.card,color:on?C.primaryD:C.muted}}, this.icon(ic,19,on?C.primary:C.faint,on), lb);
+        }))),
+      sec('Sonido', h('button',{onClick:()=>{ d.muted=!d.muted; this.setState({t:Date.now()}); this.persist(); },style:{...this.ghostBtn(),width:'100%',justifyContent:'center'}}, this.icon(d.muted?'volume_off':'volume_up',18,C.text), d.muted?'Sonido desactivado — toca para activar':'Sonido activado — toca para silenciar')),
+      sec('Zona de riesgo', h('button',{onClick:()=>this.resetAll(),style:{...this.ghostBtn(),width:'100%',justifyContent:'center',color:C.danger,borderColor:C.danger+'55'}}, this.icon('restart_alt',18,C.danger),'Borrar todo y empezar de cero'))
+    ], ()=>this.setState({settings:false}));
+  }
+  renderAchModal(){
+    const h=this.h,C=this.C,f=this.state.achForm; const d=this.state.data; const set=(k,v)=>this.setState({achForm:{...f,[k]:v}});
+    const icons=['star','military_tech','emoji_events','local_fire_department','menu_book','fitness_center','self_improvement','chess','savings','bolt','verified','diamond'];
+    const titles=[...new Set(Object.values(d.goals).flat().map(g=>(g.title||'').trim()).filter(Boolean))];
+    const metrics=[['goal','Completar una meta X veces'],['streak','Días de racha (récord)'],['level','Nivel alcanzado'],['xp','XP total ganado'],['chess','Partidas de ajedrez']];
+    const valid=f.name.trim().length>0 && (f.metric!=='goal' || (f.goalTitle||'').trim().length>0);
+    const unit={goal:'veces',streak:'días',level:'nivel',xp:'XP',chess:'partidas'}[f.metric];
+    return this.overlay([
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'18px'}},
+        h('h3',{style:{margin:0,fontFamily:'"Space Grotesk"',fontSize:'19px'}}, f.id?'Editar logro':'Nuevo logro'),
+        h('button',{onClick:()=>this.setState({achForm:null}),style:{color:C.faint}}, this.icon('close',22,C.faint))),
+      h('div',{style:{display:'grid',gap:'15px'}},
+        this.field('Nombre del logro', h('input',{value:f.name,autoFocus:true,placeholder:'Ej: 100 páginas leídas',onChange:e=>set('name',e.target.value),style:this.inp()})),
+        this.field('¿Qué debe medir?', h('select',{value:f.metric,onChange:e=>set('metric',e.target.value),style:this.inp()}, metrics.map(([v,lb])=>h('option',{key:v,value:v},lb)))),
+        f.metric==='goal'?this.field('¿Cuál meta?', titles.length?h('select',{value:f.goalTitle,onChange:e=>set('goalTitle',e.target.value),style:this.inp()}, [h('option',{key:'_',value:''},'Elige una meta...'), ...titles.map(t=>h('option',{key:t,value:t},t))]):h('input',{value:f.goalTitle,placeholder:'Escribe el nombre exacto de la meta',onChange:e=>set('goalTitle',e.target.value),style:this.inp()})):null,
+        this.field('Meta a alcanzar ('+unit+')', h('input',{type:'number',min:1,value:f.target,onChange:e=>set('target',e.target.value),style:this.inp()})),
+        this.field('Ícono', h('div',{style:{display:'flex',flexWrap:'wrap',gap:'7px'}},
+          icons.map(ic=>{ const on=f.icon===ic;
+            return h('button',{key:ic,onClick:()=>set('icon',ic),style:{width:'42px',height:'42px',borderRadius:'11px',display:'grid',placeItems:'center',border:'2px solid '+(on?C.gold:C.line2),background:on?C.goldSoft:C.card}}, this.icon(ic,20,on?C.gold:C.muted,on));
+          }))),
+        h('div',{style:{fontSize:'12px',color:C.faint,fontWeight:600,lineHeight:1.4}},'Se desbloqueará solo cuando alcances la cifra. Las metas se cuentan por sus casillas/veces completadas sumando todas las semanas.'),
+        h('div',{style:{display:'flex',gap:'10px',marginTop:'4px'}},
+          f.id?h('button',{onClick:()=>this.deleteCustomAch(f.id),style:{...this.ghostBtn(),color:C.danger,borderColor:C.dangerSoft}}, this.icon('delete',18,C.danger),'Eliminar'):null,
+          h('button',{onClick:()=>valid&&this.saveCustomAch(f),disabled:!valid,style:{...this.primaryBtn(),flex:1,justifyContent:'center',opacity:valid?1:.5}}, this.icon('check',19,'#fff'), f.id?'Guardar':'Crear logro'))
+      )
+    ], ()=>this.setState({achForm:null}));
+  }
+
+  field(label,control){ const h=this.h,C=this.C; return h('label',{style:{display:'block'}},
+    h('span',{style:{display:'block',fontSize:'12px',fontWeight:700,color:C.muted,marginBottom:'6px',letterSpacing:'.2px'}},label), control); }
+  inp(){ const C=this.C; return {width:'100%',padding:'11px 13px',borderRadius:'11px',border:'1px solid '+C.line2,background:C.card2,fontSize:'14px',fontWeight:600,outline:'none',color:C.text}; }
+  primaryBtn(){ const C=this.C; return {display:'inline-flex',alignItems:'center',gap:'7px',padding:'11px 17px',borderRadius:'12px',background:'linear-gradient(135deg,'+C.primary+',#8B5CF6)',color:'#fff',fontWeight:700,fontSize:'13.5px',boxShadow:'0 6px 18px '+C.primaryGlow}; }
+  ghostBtn(){ const C=this.C; return {display:'inline-flex',alignItems:'center',gap:'7px',padding:'11px 15px',borderRadius:'12px',background:C.card,border:'1px solid '+C.line2,color:C.text,fontWeight:700,fontSize:'13.5px'}; }
+}
+</script>
+</body>
+</html>

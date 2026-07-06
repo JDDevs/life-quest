@@ -1,0 +1,53 @@
+export const LIGHT = {
+  bg: '#F4F4F9',
+  card: '#FFFFFF',
+  card2: '#FBFBFE',
+  line: '#ECECF3',
+  line2: '#E0E0EC',
+  text: '#211D33',
+  muted: '#8A87A0',
+  faint: '#B7B5C7',
+  primary: '#6D5AE6',
+  primaryD: '#5A46CC',
+  primarySoft: '#EEEAFF',
+  primaryGlow: 'rgba(109,90,230,.28)',
+  gold: '#E9990A',
+  goldSoft: '#FBEFD4',
+  goldText: '#8A5A00',
+  green: '#1DA574',
+  greenSoft: '#DFF4EC',
+  greenText: '#0F7F58',
+  blue: '#3B82F6',
+  blueSoft: '#E4EEFF',
+  danger: '#E14748',
+  dangerSoft: '#FBE6E6',
+}
+
+export const DARK: typeof LIGHT = {
+  bg: '#131019',
+  card: '#1C1927',
+  card2: '#232030',
+  line: '#2B2839',
+  line2: '#39354C',
+  text: '#ECEAF6',
+  muted: '#9E9BB4',
+  faint: '#6C6883',
+  primary: '#8B7BF0',
+  primaryD: '#A899F7',
+  primarySoft: '#2A2545',
+  primaryGlow: 'rgba(139,123,240,.4)',
+  gold: '#F2B23D',
+  goldSoft: '#33280F',
+  goldText: '#F3C869',
+  green: '#2FC08C',
+  greenSoft: '#15302A',
+  greenText: '#4FD3A0',
+  blue: '#5B94F7',
+  blueSoft: '#1B2740',
+  danger: '#F0696A',
+  dangerSoft: '#3A1F22',
+}
+
+export function palette(theme: 'light' | 'dark') {
+  return theme === 'dark' ? DARK : LIGHT
+}
