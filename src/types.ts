@@ -50,6 +50,8 @@ export interface Task {
   doneDate: string | null
   createdAt: string
   subtasks: Subtask[]
+  /** Optional link to a weekly goal (by its title) to track contribution. */
+  linkedGoal?: string
 }
 
 export interface TaskList {

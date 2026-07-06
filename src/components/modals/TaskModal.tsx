@@ -16,6 +16,14 @@ export function TaskModal() {
   if (!f) return null
   const set = (k: string, v: unknown) => setTaskForm({ ...f, [k]: v })
   const valid = f.title.trim().length > 0
+  const goalTitles = [
+    ...new Set(
+      Object.values(d.goals)
+        .flat()
+        .map((g) => (g.title || '').trim())
+        .filter(Boolean),
+    ),
+  ]
 
   const addTag = () => {
     const t = tagDraft.trim()
@@ -84,6 +92,23 @@ export function TaskModal() {
         </Field>
         <Field label="Pomodoros estimados">
           <input type="number" min={0} value={f.estPomos} onChange={(e) => set('estPomos', e.target.value)} style={inp(C)} />
+        </Field>
+        <Field label="Vincular a una meta (opcional)">
+          {goalTitles.length ? (
+            <select value={f.linkedGoal} onChange={(e) => set('linkedGoal', e.target.value)} style={inp(C)}>
+              <option value="">Ninguna</option>
+              {goalTitles.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div style={{ fontSize: '12.5px', color: C.faint, fontWeight: 600 }}>Crea metas para poder vincular la tarea.</div>
+          )}
+          <div style={{ fontSize: '11px', color: C.faint, fontWeight: 600, marginTop: '5px', lineHeight: 1.35 }}>
+            No suma XP; solo muestra cuánto aportas a esa meta semanal.
+          </div>
         </Field>
         <Field label="Etiquetas">
           <div>

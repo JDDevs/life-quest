@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { useStore } from '../store'
+import { useStore, pomoRemainingOf, pomoElapsedOf } from '../store'
 import type { Stats } from '../types'
 import { Card, Icon, SectionTitle, StatTile, useC } from '../ui'
 
@@ -11,8 +10,8 @@ function fmt(sec: number) {
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 function humanDate(key: string) {
-  const [y, m, dd] = key.split('-').map(Number)
-  return dd + ' de ' + MONTHS[m - 1] + '.' + (y ? '' : '')
+  const [, m, dd] = key.split('-').map(Number)
+  return dd + ' de ' + MONTHS[m - 1] + '.'
 }
 function hhmm(ts: number) {
   const d = new Date(ts)
@@ -23,109 +22,32 @@ export function Pomodoro({ s }: { s: Stats }) {
   const C = useC()
   const narrow = useStore((st) => st.narrow)
   const d = useStore((st) => st.data)
-  const mode = useStore((st) => st.pomoMode)
+  const run = useStore((st) => st.pomoRun)
+  useStore((st) => st.tick) // re-render each timer tick
   const setMode = useStore((st) => st.setPomoMode)
-  const pomoTaskId = useStore((st) => st.pomoTaskId)
   const setPomoTask = useStore((st) => st.setPomoTask)
   const updateSettings = useStore((st) => st.updatePomoSettings)
-  const logPomoSession = useStore((st) => st.logPomoSession)
+  const pomoStart = useStore((st) => st.pomoStart)
+  const pomoPause = useStore((st) => st.pomoPause)
+  const pomoStopLog = useStore((st) => st.pomoStopLog)
+  const pomoReset = useStore((st) => st.pomoReset)
   const settings = d.pomoSettings
 
-  const [phase, setPhase] = useState<'work' | 'break'>('work')
-  const [running, setRunning] = useState(false)
-  const [remaining, setRemaining] = useState(settings.workMin * 60)
-  const [elapsed, setElapsed] = useState(0)
-  const [cycle, setCycle] = useState(0)
-  const anchor = useRef<{ at: number; base: number } | null>(null)
-
-  const phaseTarget = phase === 'work' ? settings.workMin * 60 : (cycle > 0 && cycle % settings.longEvery === 0 ? settings.longBreakMin : settings.breakMin) * 60
-
-  // keep the idle countdown in sync with settings changes
-  useEffect(() => {
-    if (!running && mode === 'pomo') setRemaining(phaseTarget)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.workMin, settings.breakMin, settings.longBreakMin, phase, mode])
-
-  useEffect(() => {
-    if (!running) return
-    const id = setInterval(() => {
-      const a = anchor.current
-      if (!a) return
-      const passed = Math.floor((Date.now() - a.at) / 1000)
-      if (mode === 'pomo') {
-        const rem = a.base - passed
-        if (rem <= 0) {
-          finishWork(a.base)
-        } else setRemaining(rem)
-      } else {
-        setElapsed(a.base + passed)
-      }
-    }, 250)
-    return () => clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, mode])
-
-  function start() {
-    anchor.current = { at: Date.now(), base: mode === 'pomo' ? remaining : elapsed }
-    setRunning(true)
-  }
-  function pause() {
-    setRunning(false)
-    anchor.current = null
-  }
-  function finishWork(baseSec: number) {
-    // called when a pomo countdown reaches zero
-    setRunning(false)
-    anchor.current = null
-    const now = Date.now()
-    if (phase === 'work') {
-      const minutes = Math.round(baseSec / 60) || settings.workMin
-      logPomoSession({ minutes: settings.workMin, mode: 'pomo', taskId: pomoTaskId, start: now - minutes * 60000, end: now })
-      const nextCycle = cycle + 1
-      setCycle(nextCycle)
-      setPhase('break')
-      const brk = nextCycle % settings.longEvery === 0 ? settings.longBreakMin : settings.breakMin
-      setRemaining(brk * 60)
-    } else {
-      setPhase('work')
-      setRemaining(settings.workMin * 60)
-    }
-  }
-  function stopAndLog() {
-    // stop early; log the focus time accrued this run (work only)
-    const now = Date.now()
-    if (mode === 'pomo') {
-      const done = settings.workMin * 60 - remaining
-      const minutes = Math.floor(done / 60)
-      if (phase === 'work' && minutes >= 1) logPomoSession({ minutes, mode: 'pomo', taskId: pomoTaskId, start: now - minutes * 60000, end: now })
-      setRunning(false)
-      anchor.current = null
-      setPhase('work')
-      setRemaining(settings.workMin * 60)
-    } else {
-      const minutes = Math.floor(elapsed / 60)
-      if (minutes >= 1) logPomoSession({ minutes, mode: 'stopwatch', taskId: pomoTaskId, start: now - minutes * 60000, end: now })
-      setRunning(false)
-      anchor.current = null
-      setElapsed(0)
-    }
-  }
-  function reset() {
-    setRunning(false)
-    anchor.current = null
-    setPhase('work')
-    setCycle(0)
-    setRemaining(settings.workMin * 60)
-    setElapsed(0)
-  }
+  const mode = run.mode
+  const phase = run.phase
+  const running = run.running
+  const remaining = pomoRemainingOf(run)
+  const elapsed = pomoElapsedOf(run)
+  const phaseTarget = phase === 'work' ? settings.workMin * 60 : (run.cycle > 0 && run.cycle % settings.longEvery === 0 ? settings.longBreakMin : settings.breakMin) * 60
 
   const displaySec = mode === 'pomo' ? remaining : elapsed
   const progress = mode === 'pomo' ? 1 - remaining / phaseTarget : (elapsed % (settings.workMin * 60)) / (settings.workMin * 60)
   const R = 130
   const CIRC = 2 * Math.PI * R
   const ringColor = phase === 'break' ? C.green : C.primary
+  // "Comenzar" vs "Reanudar": mid-run if we're not at the fresh start value
+  const midRun = mode === 'pomo' ? remaining < phaseTarget : elapsed > 0
 
-  // group sessions by date for the record
   const byDate: Record<string, typeof d.pomoSessions> = {}
   d.pomoSessions.forEach((sn) => {
     ;(byDate[sn.date] = byDate[sn.date] || []).push(sn)
@@ -136,7 +58,6 @@ export function Pomodoro({ s }: { s: Stats }) {
     <div>
       <SectionTitle title="Pomodoro" sub="Enfócate en bloques de tiempo y registra tu concentración" />
       <div style={{ display: 'grid', gridTemplateColumns: narrow ? '1fr' : '1.25fr 1fr', gap: '18px', marginTop: '14px' }}>
-        {/* timer card */}
         <Card extra={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: '4px', padding: '4px', background: C.card2, border: '1px solid ' + C.line, borderRadius: '12px', marginBottom: '18px' }}>
             {(['pomo', 'stopwatch'] as const).map((m) => {
@@ -144,12 +65,9 @@ export function Pomodoro({ s }: { s: Stats }) {
               return (
                 <button
                   key={m}
-                  onClick={() => {
-                    if (running) return
-                    setMode(m)
-                    reset()
-                  }}
-                  style={{ padding: '8px 20px', borderRadius: '9px', fontWeight: 700, fontSize: '13.5px', color: on ? '#fff' : C.muted, background: on ? C.primary : 'transparent' }}
+                  onClick={() => setMode(m)}
+                  disabled={running}
+                  style={{ padding: '8px 20px', borderRadius: '9px', fontWeight: 700, fontSize: '13.5px', color: on ? '#fff' : C.muted, background: on ? C.primary : 'transparent', cursor: running ? 'not-allowed' : 'pointer', opacity: running && !on ? 0.5 : 1 }}
                 >
                   {m === 'pomo' ? 'Pomo' : 'Cronómetro'}
                 </button>
@@ -157,9 +75,8 @@ export function Pomodoro({ s }: { s: Stats }) {
             })}
           </div>
 
-          {/* task selector */}
           <select
-            value={pomoTaskId || ''}
+            value={run.taskId || ''}
             onChange={(e) => setPomoTask(e.target.value || null)}
             style={{ border: 'none', background: 'transparent', color: C.muted, fontWeight: 700, fontSize: '14px', textAlign: 'center', marginBottom: '10px', outline: 'none', maxWidth: '100%' }}
           >
@@ -196,25 +113,24 @@ export function Pomodoro({ s }: { s: Stats }) {
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {!running ? (
-              <button onClick={start} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 30px', borderRadius: '30px', background: 'linear-gradient(135deg,' + C.primary + ',#8B5CF6)', color: '#fff', fontWeight: 700, fontSize: '15px', boxShadow: '0 8px 20px ' + C.primaryGlow }}>
+              <button onClick={pomoStart} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 30px', borderRadius: '30px', background: 'linear-gradient(135deg,' + C.primary + ',#8B5CF6)', color: '#fff', fontWeight: 700, fontSize: '15px', boxShadow: '0 8px 20px ' + C.primaryGlow }}>
                 <Icon name="play_arrow" size={20} color="#fff" fill />
-                {displaySec !== phaseTarget && mode === 'pomo' ? 'Reanudar' : elapsed > 0 && mode === 'stopwatch' ? 'Reanudar' : 'Comenzar'}
+                {midRun ? 'Reanudar' : 'Comenzar'}
               </button>
             ) : (
-              <button onClick={pause} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 30px', borderRadius: '30px', border: '2px solid ' + C.line2, color: C.text, fontWeight: 700, fontSize: '15px' }}>
+              <button onClick={pomoPause} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 30px', borderRadius: '30px', border: '2px solid ' + C.line2, color: C.text, fontWeight: 700, fontSize: '15px' }}>
                 <Icon name="pause" size={20} color={C.text} />
                 Pausar
               </button>
             )}
-            <button onClick={stopAndLog} title="Terminar y registrar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid ' + C.line2, color: C.green, display: 'grid', placeItems: 'center' }}>
+            <button onClick={pomoStopLog} title="Terminar y registrar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid ' + C.line2, color: C.green, display: 'grid', placeItems: 'center' }}>
               <Icon name="stop" size={22} color={C.green} fill />
             </button>
-            <button onClick={reset} title="Reiniciar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid ' + C.line2, color: C.muted, display: 'grid', placeItems: 'center' }}>
+            <button onClick={pomoReset} title="Reiniciar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid ' + C.line2, color: C.muted, display: 'grid', placeItems: 'center' }}>
               <Icon name="restart_alt" size={22} color={C.muted} />
             </button>
           </div>
 
-          {/* duration config */}
           {mode === 'pomo' ? (
             <div style={{ display: 'flex', gap: '16px', marginTop: '18px', flexWrap: 'wrap', justifyContent: 'center' }}>
               {(
@@ -241,7 +157,6 @@ export function Pomodoro({ s }: { s: Stats }) {
           ) : null}
         </Card>
 
-        {/* summary + record */}
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '18px' }}>
             <StatTile icon="timer" label="Pomos de hoy" val={s.pomosToday} fg={C.primary} bg={C.primarySoft} />

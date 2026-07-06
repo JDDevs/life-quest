@@ -123,9 +123,14 @@ function EmptyMetas({ onCreate, onImport }: { onCreate: () => void; onImport: ()
 function GoalRow({ g, a }: { g: Goal; a: Area }) {
   const C = useC()
   const openGoalForm = useStore((st) => st.openGoalForm)
+  const setView = useStore((st) => st.setView)
+  const tasks = useStore((st) => st.data.tasks)
   const u = goalUnits(g)
   const done = u.complete
   const main = g.priority === 'main'
+  const linked = tasks.filter((t) => t.linkedGoal === g.title)
+  const linkedDone = linked.filter((t) => t.done).length
+  const linkPct = linked.length ? Math.round((linkedDone / linked.length) * 100) : 0
   return (
     <div
       style={{
@@ -198,6 +203,33 @@ function GoalRow({ g, a }: { g: Goal; a: Area }) {
       <div style={{ marginTop: '12px' }}>
         <GoalControl g={g} a={a} />
       </div>
+      {linked.length ? (
+        <button
+          onClick={() => setView('tareas')}
+          title="Ver tareas"
+          style={{
+            marginTop: '12px',
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px',
+            padding: '9px 11px',
+            borderRadius: '11px',
+            background: C.card2,
+            border: '1px solid ' + C.line,
+            textAlign: 'left',
+          }}
+        >
+          <Icon name="task_alt" size={16} color={C.green} fill />
+          <span style={{ fontSize: '12px', fontWeight: 700, color: C.muted, whiteSpace: 'nowrap' }}>
+            {linkedDone}/{linked.length} tareas
+          </span>
+          <span style={{ flex: 1, height: '7px', borderRadius: '5px', background: C.line, overflow: 'hidden' }}>
+            <span style={{ display: 'block', width: linkPct + '%', height: '100%', background: C.green, borderRadius: '5px' }} />
+          </span>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: linkPct === 100 ? C.green : C.faint }}>{linkPct}%</span>
+        </button>
+      ) : null}
     </div>
   )
 }

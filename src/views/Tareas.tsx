@@ -247,6 +247,12 @@ function TaskRow({ t }: { t: Task }) {
               {tag}
             </span>
           ))}
+          {t.linkedGoal ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: 700, color: C.green }} title={'Aporta a: ' + t.linkedGoal}>
+              <Icon name="flag" size={12} color={C.green} fill />
+              <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.linkedGoal}</span>
+            </span>
+          ) : null}
           {t.estPomos > 0 ? (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: C.muted, fontWeight: 600 }}>
               <Icon name="timer" size={13} color={C.muted} />

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useStore } from './store'
 import { cloudEnabled, pullState, pushState } from './lib/cloud'
 import { palette } from './theme'
@@ -36,15 +36,32 @@ export default function App() {
     document.body.style.color = C.text
   }, [theme])
 
-  // responsive breakpoint tracking
-  useEffect(() => {
+  // responsive breakpoint tracking — useLayoutEffect corrects before paint so
+  // the mobile layout doesn't flash the desktop columns first
+  useLayoutEffect(() => {
     const onResize = () => setNarrow(window.innerWidth < 760)
-    window.addEventListener('resize', onResize)
     onResize()
-    return () => window.removeEventListener('resize', onResize)
+    window.addEventListener('resize', onResize)
+    window.addEventListener('orientationchange', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('orientationchange', onResize)
+    }
   }, [setNarrow])
 
-  // cloud sync: pull on start, then push (debounced) whenever data changes
+  // drive the pomodoro/stopwatch timer globally so it keeps running (and can
+  // complete) even when you're on another tab of the app
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (useStore.getState().pomoRun.running) useStore.getState().pomoTick()
+    }, 500)
+    return () => clearInterval(id)
+  }, [])
+
+  // ---- cloud sync ----
+  const dirty = useRef(false)
+
+  // pull on start; if nothing remote yet, push our local copy
   useEffect(() => {
     if (!cloudEnabled()) return
     let cancelled = false
@@ -56,7 +73,10 @@ export default function App() {
         if (cancelled) return
         if (remote) st.replaceData(remote.data)
         else await pushState(useStore.getState().data)
-        if (!cancelled) useStore.getState().setSyncStatus('synced')
+        if (!cancelled) {
+          dirty.current = false
+          useStore.getState().setSyncStatus('synced')
+        }
       } catch {
         if (!cancelled) useStore.getState().setSyncStatus('offline')
       }
@@ -66,16 +86,19 @@ export default function App() {
     }
   }, [])
 
+  // push (debounced) whenever data changes
   useEffect(() => {
     if (!cloudEnabled()) return
     let timer: ReturnType<typeof setTimeout> | undefined
     const unsub = useStore.subscribe((state, prev) => {
       if (state.data === prev.data) return
+      dirty.current = true
       clearTimeout(timer)
       timer = setTimeout(async () => {
         useStore.getState().setSyncStatus('syncing')
         try {
           await pushState(useStore.getState().data)
+          dirty.current = false
           useStore.getState().setSyncStatus('synced')
         } catch {
           useStore.getState().setSyncStatus('offline')
@@ -85,6 +108,35 @@ export default function App() {
     return () => {
       clearTimeout(timer)
       unsub()
+    }
+  }, [])
+
+  // when this device regains focus, sync with the cloud: flush local changes if
+  // any, otherwise pull the latest (so switching devices shows fresh data)
+  useEffect(() => {
+    if (!cloudEnabled()) return
+    const onFocus = async () => {
+      if (document.visibilityState === 'hidden') return
+      useStore.getState().setSyncStatus('syncing')
+      try {
+        if (dirty.current) {
+          await pushState(useStore.getState().data)
+          dirty.current = false
+        } else {
+          const remote = await pullState()
+          if (remote) useStore.getState().replaceData(remote.data)
+          dirty.current = false
+        }
+        useStore.getState().setSyncStatus('synced')
+      } catch {
+        useStore.getState().setSyncStatus('offline')
+      }
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
     }
   }, [])
 

@@ -44,6 +44,47 @@ export interface TaskForm {
   estPomos: number | string
   due: string | null
   subtasks: Subtask[]
+  linkedGoal: string
+}
+
+// Timer state lives in the store (survives leaving the tab) and is mirrored to
+// localStorage (survives reload). It is time-based: `anchorTs` + `baseSec` let
+// us reconstruct the exact remaining/elapsed time at any moment via Date.now().
+export interface PomoRun {
+  running: boolean
+  mode: 'pomo' | 'stopwatch'
+  phase: 'work' | 'break'
+  cycle: number
+  taskId: string | null
+  anchorTs: number | null
+  baseSec: number
+}
+const RUN_KEY = 'gce_pomo_run'
+function loadRun(workMin: number): PomoRun {
+  try {
+    const raw = localStorage.getItem(RUN_KEY)
+    if (raw) return JSON.parse(raw) as PomoRun
+  } catch {
+    /* ignore */
+  }
+  return { running: false, mode: 'pomo', phase: 'work', cycle: 0, taskId: null, anchorTs: null, baseSec: workMin * 60 }
+}
+function saveRun(run: PomoRun): void {
+  try {
+    localStorage.setItem(RUN_KEY, JSON.stringify(run))
+  } catch {
+    /* ignore */
+  }
+}
+export function pomoRemainingOf(run: PomoRun): number {
+  if (run.mode !== 'pomo') return run.baseSec
+  if (!run.running || run.anchorTs == null) return run.baseSec
+  return Math.max(0, run.baseSec - Math.floor((Date.now() - run.anchorTs) / 1000))
+}
+export function pomoElapsedOf(run: PomoRun): number {
+  if (run.mode !== 'stopwatch') return run.baseSec
+  if (!run.running || run.anchorTs == null) return run.baseSec
+  return run.baseSec + Math.floor((Date.now() - run.anchorTs) / 1000)
 }
 
 export function areaColor(id: string): string {
@@ -139,8 +180,7 @@ interface StoreState {
   // tareas + pomodoro ui
   taskView: TaskView
   taskForm: TaskForm | null
-  pomoTaskId: string | null
-  pomoMode: 'pomo' | 'stopwatch'
+  pomoRun: PomoRun
 
   // avatar progression modal
   avatarModal: boolean
@@ -241,6 +281,12 @@ interface StoreState {
   setPomoMode: (m: 'pomo' | 'stopwatch') => void
   updatePomoSettings: (patch: Partial<AppData['pomoSettings']>) => void
   logPomoSession: (args: { minutes: number; mode: 'pomo' | 'stopwatch'; taskId: string | null; start: number; end: number }) => void
+  // timer controls (state persisted across tab switches & reloads)
+  pomoStart: () => void
+  pomoPause: () => void
+  pomoStopLog: () => void
+  pomoReset: () => void
+  pomoTick: () => void
 
   // avatar modal
   setAvatarModal: (open: boolean) => void
@@ -284,8 +330,9 @@ export const useStore = create<StoreState>((set, get) => {
     if (data.hp == null) data.hp = maxHP(computeStats(data).level)
   }
 
+  const initialData = load()
   return {
-    data: load(),
+    data: initialData,
     view: 'dash',
     goalForm: null,
     rewardForm: null,
@@ -300,8 +347,7 @@ export const useStore = create<StoreState>((set, get) => {
 
     taskView: 'today',
     taskForm: null,
-    pomoTaskId: null,
-    pomoMode: 'pomo',
+    pomoRun: loadRun(initialData.pomoSettings.workMin),
     avatarModal: false,
 
     syncStatus: cloudEnabled() ? 'syncing' : 'disabled',
@@ -861,8 +907,9 @@ export const useStore = create<StoreState>((set, get) => {
               estPomos: t.estPomos,
               due: t.due,
               subtasks: t.subtasks.map((x) => ({ ...x })),
+              linkedGoal: t.linkedGoal || '',
             }
-          : { title: '', notes: '', listId: defaultList, tags: [], priority: 'anytime', estPomos: 0, due: null, subtasks: [] },
+          : { title: '', notes: '', listId: defaultList, tags: [], priority: 'anytime', estPomos: 0, due: null, subtasks: [], linkedGoal: '' },
       })
     },
     setTaskForm: (f) => set({ taskForm: f }),
@@ -884,6 +931,7 @@ export const useStore = create<StoreState>((set, get) => {
           doneDate: null,
           createdAt: dateKey(new Date()),
           subtasks: f.subtasks.filter((s) => s.title.trim()),
+          linkedGoal: (f.linkedGoal || '').trim() || undefined,
         }
         if (f.id) {
           const i = data.tasks.findIndex((x) => x.id === f.id)
@@ -966,19 +1014,38 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     // ---------- pomodoro ----------
-    setPomoTask: (id) => set({ pomoTaskId: id }),
-    setPomoMode: (m) => set({ pomoMode: m }),
-    updatePomoSettings: (p) =>
+    setPomoTask: (id) => {
+      const run = { ...get().pomoRun, taskId: id }
+      saveRun(run)
+      set({ pomoRun: run })
+    },
+    setPomoMode: (m) => {
+      const cur = get().pomoRun
+      if (cur.running) return
+      const workMin = get().data.pomoSettings.workMin
+      const run: PomoRun = { ...cur, mode: m, phase: 'work', cycle: 0, anchorTs: null, baseSec: m === 'pomo' ? workMin * 60 : 0 }
+      saveRun(run)
+      set({ pomoRun: run })
+    },
+    updatePomoSettings: (p) => {
       patch((d) => {
         d.pomoSettings = { ...d.pomoSettings, ...p }
-      }),
+      })
+      // keep the idle countdown in sync with a changed work duration
+      const cur = get().pomoRun
+      if (!cur.running && cur.mode === 'pomo' && cur.phase === 'work') {
+        const run = { ...cur, baseSec: get().data.pomoSettings.workMin * 60 }
+        saveRun(run)
+        set({ pomoRun: run })
+      }
+    },
     logPomoSession: ({ minutes, mode, taskId, start, end }) => {
       if (minutes <= 0) return
       // El enfoque NO da XP/monedas ni afecta la racha; solo registra la sesión.
       patch((data) => {
         const task = taskId ? data.tasks.find((t) => t.id === taskId) : null
         data.pomoSessions.unshift({
-          id: 'ps' + Date.now(),
+          id: 'ps' + Date.now() + Math.random().toString(36).slice(2, 5),
           date: dateKey(new Date()),
           start,
           end,
@@ -993,6 +1060,72 @@ export const useStore = create<StoreState>((set, get) => {
         }
       })
       playSound('heal', get().data.muted)
+    },
+
+    // ---------- pomodoro timer (persisted across tab switches & reloads) ----------
+    pomoStart: () => {
+      const cur = get().pomoRun
+      const base = cur.mode === 'pomo' ? pomoRemainingOf(cur) : pomoElapsedOf(cur)
+      const run: PomoRun = { ...cur, running: true, anchorTs: Date.now(), baseSec: base }
+      saveRun(run)
+      set({ pomoRun: run, tick: Date.now() })
+    },
+    pomoPause: () => {
+      const cur = get().pomoRun
+      const base = cur.mode === 'pomo' ? pomoRemainingOf(cur) : pomoElapsedOf(cur)
+      const run: PomoRun = { ...cur, running: false, anchorTs: null, baseSec: base }
+      saveRun(run)
+      set({ pomoRun: run, tick: Date.now() })
+    },
+    pomoReset: () => {
+      const cur = get().pomoRun
+      const workMin = get().data.pomoSettings.workMin
+      const run: PomoRun = { ...cur, running: false, phase: 'work', cycle: 0, anchorTs: null, baseSec: cur.mode === 'pomo' ? workMin * 60 : 0 }
+      saveRun(run)
+      set({ pomoRun: run, tick: Date.now() })
+    },
+    pomoStopLog: () => {
+      const cur = get().pomoRun
+      const s = get().data.pomoSettings
+      const now = Date.now()
+      if (cur.mode === 'pomo') {
+        const done = s.workMin * 60 - pomoRemainingOf(cur)
+        const minutes = Math.floor(done / 60)
+        if (cur.phase === 'work' && minutes >= 1) {
+          get().logPomoSession({ minutes, mode: 'pomo', taskId: cur.taskId, start: now - minutes * 60000, end: now })
+        }
+      } else {
+        const minutes = Math.floor(pomoElapsedOf(cur) / 60)
+        if (minutes >= 1) get().logPomoSession({ minutes, mode: 'stopwatch', taskId: cur.taskId, start: now - minutes * 60000, end: now })
+      }
+      get().pomoReset()
+    },
+    pomoTick: () => {
+      const cur = get().pomoRun
+      if (!cur.running) return
+      if (cur.mode === 'pomo') {
+        const rem = pomoRemainingOf(cur)
+        if (rem <= 0) {
+          const s = get().data.pomoSettings
+          const now = Date.now()
+          if (cur.phase === 'work') {
+            // work block finished → log it, then start a break
+            get().logPomoSession({ minutes: s.workMin, mode: 'pomo', taskId: cur.taskId, start: now - s.workMin * 60000, end: now })
+            const nextCycle = cur.cycle + 1
+            const brk = nextCycle % s.longEvery === 0 ? s.longBreakMin : s.breakMin
+            const run: PomoRun = { ...cur, running: false, anchorTs: null, phase: 'break', cycle: nextCycle, baseSec: brk * 60 }
+            saveRun(run)
+            set({ pomoRun: run, tick: Date.now() })
+          } else {
+            const run: PomoRun = { ...cur, running: false, anchorTs: null, phase: 'work', baseSec: s.workMin * 60 }
+            saveRun(run)
+            set({ pomoRun: run, tick: Date.now() })
+          }
+          return
+        }
+      }
+      // still running: just refresh the display
+      set({ tick: Date.now() })
     },
 
     // ---------- avatar modal ----------
