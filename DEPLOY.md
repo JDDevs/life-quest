@@ -35,11 +35,14 @@ Usa GitHub Desktop o la terminal. Crea un repo `mi-camino` con este proyecto.
    |------|-------|-------|
    | `DATABASE_URL` | Server | la cadena de conexión de Neon |
    | `VITE_SYNC_ID` | Build/Client | un texto largo y secreto (tu “contraseña” de sync) |
+   | `GEMINI_API_KEY` | Server | (opcional) tu API key de Google Gemini, para el asistente y el tutor de ajedrez |
 
-4. **Deploy**. Vercel publica el sitio **y** la función `api/state.js` juntos.
+4. **Deploy**. Vercel publica el sitio **y** las funciones `api/state.js` y `api/ai.js` juntas.
 
-> `DATABASE_URL` es secreta y queda en el servidor. `VITE_SYNC_ID` se incluye en
-> el sitio (como una llave pública); por eso debe ser larga y difícil de adivinar.
+> `DATABASE_URL` y `GEMINI_API_KEY` son secretas y quedan en el servidor.
+> `VITE_SYNC_ID` se incluye en el sitio (como una llave pública); por eso debe
+> ser larga y difícil de adivinar. La función `api/ai.js` exige ese mismo
+> `VITE_SYNC_ID` para que nadie use tu cuota de Gemini gratis.
 
 ## 4) Verifica
 
@@ -52,6 +55,21 @@ Abre la URL en el navegador del teléfono → **“Añadir a pantalla de inicio�
 Se abre como app y con los mismos datos que en la PC.
 
 ---
+
+## Funciones de IA (Gemini) — opcional pero recomendado
+
+El **asistente de metas** (sugerir XP/monedas, proponer metas, chat) y el **tutor
+de ajedrez** (explicaciones en lenguaje natural) usan Google Gemini:
+
+1. Saca una API key **gratis** en <https://aistudio.google.com/apikey> (sin tarjeta).
+2. Añádela como variable `GEMINI_API_KEY` (**Server**) en Vercel — y en tu `.env`
+   local si usas `vercel dev`.
+3. Las funciones de IA aparecen solo si `VITE_SYNC_ID` está configurado (es el
+   candado que protege el endpoint). La key **nunca** viaja al navegador.
+
+> El motor de ajedrez (Stockfish) corre **local en el navegador** (`public/engine/`,
+> se copia solo antes de cada build) y no consume la cuota de Gemini: solo las
+> explicaciones en texto usan la IA.
 
 ## Desarrollo local
 

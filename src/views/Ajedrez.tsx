@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { addDays, todayIdx } from '../lib/date'
 import { useStore } from '../store'
 import type { Stats } from '../types'
 import { Card, Field, Icon, SectionTitle, inp, primaryBtn, useC } from '../ui'
+import { AjedrezTutor } from './AjedrezTutor'
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const RESULTS: [string, string][] = [
@@ -14,6 +16,7 @@ const RESULT_LABEL: Record<string, string> = { win: 'Victoria', draw: 'Tablas', 
 
 export function Ajedrez({ s }: { s: Stats }) {
   const C = useC()
+  const [tab, setTab] = useState<'registro' | 'tutor'>('registro')
   const d = useStore((st) => st.data)
   const narrow = useStore((st) => st.narrow)
   const cd = useStore((st) => st.chessDraft)
@@ -29,6 +32,41 @@ export function Ajedrez({ s }: { s: Stats }) {
 
   return (
     <div>
+      <div style={{ display: 'flex', gap: '7px', marginBottom: '18px' }}>
+        {(
+          [
+            ['registro', 'Registro', 'edit_calendar'],
+            ['tutor', 'Tutor IA', 'school'],
+          ] as const
+        ).map(([v, lb, ic]) => {
+          const on = tab === v
+          return (
+            <button
+              key={v}
+              onClick={() => setTab(v)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '9px 15px',
+                borderRadius: '11px',
+                fontWeight: 700,
+                fontSize: '13px',
+                border: '2px solid ' + (on ? C.primary : C.line2),
+                background: on ? C.primarySoft : C.card,
+                color: on ? C.primaryD : C.muted,
+              }}
+            >
+              <Icon name={ic} size={17} color={on ? C.primary : C.faint} fill={on} />
+              {lb}
+            </button>
+          )
+        })}
+      </div>
+      {tab === 'tutor' ? (
+        <AjedrezTutor />
+      ) : (
+        <>
       <SectionTitle title="Estudio de ajedrez" sub="Plan semanal y registro diario de partidas" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '12px', margin: '16px 0' }}>
         <StatMini icon="sports_esports" label="Partidas totales" val={s.chessGames} fg={C.blue} bg={C.blueSoft} sub="Registradas" />
@@ -138,6 +176,8 @@ export function Ajedrez({ s }: { s: Stats }) {
           </div>
         </div>
       ) : null}
+        </>
+      )}
     </div>
   )
 }

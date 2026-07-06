@@ -5,15 +5,20 @@
   "description": "Mi Camino — sistema de crecimiento personal gamificado (RPG-tamagotchi)",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/copy-engine.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy-engine.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
+    "chess.js": "^1.4.0",
     "react": "^18.3.1",
+    "react-chessboard": "^4.7.3",
     "react-dom": "^18.3.1",
+    "stockfish": "^18.0.8",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

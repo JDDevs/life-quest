@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { AREAS } from '../../constants'
 import { useStore } from '../../store'
+import { aiEnabled, suggestGoalPoints } from '../../lib/ai'
 import { Field, Icon, Overlay, ghostBtn, inp, primaryBtn, useC } from '../../ui'
 
 export function GoalModal() {
@@ -8,9 +10,52 @@ export function GoalModal() {
   const setGoalForm = useStore((s) => s.setGoalForm)
   const saveGoal = useStore((s) => s.saveGoal)
   const deleteGoal = useStore((s) => s.deleteGoal)
+  const data = useStore((s) => s.data)
+  const statsFn = useStore((s) => s.stats)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [aiWhy, setAiWhy] = useState<string | null>(null)
   if (!f) return null
   const set = (k: string, v: unknown) => setGoalForm({ ...f, [k]: v })
   const valid = f.title.trim().length > 0
+
+  const suggestWithAI = async () => {
+    if (!f.title.trim() || aiLoading) return
+    setAiLoading(true)
+    setAiError(null)
+    setAiWhy(null)
+    try {
+      const sug = await suggestGoalPoints(
+        {
+          areaId: f.areaId,
+          title: f.title,
+          type: f.type,
+          priority: f.priority,
+          targetDays: f.targetDays,
+          target: f.target,
+          dailyTarget: f.dailyTarget,
+        },
+        data,
+        statsFn(),
+      )
+      // read the latest form so we don't clobber edits made while awaiting
+      const cur = useStore.getState().goalForm
+      if (!cur) return
+      setGoalForm({
+        ...cur,
+        xp: sug.xp,
+        coins: sug.coins,
+        extraXp: sug.extraXp,
+        extraCoins: sug.extraCoins,
+        penalty: cur.priority === 'main' ? sug.penalty : cur.penalty,
+      })
+      setAiWhy(sug.rationale)
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'No se pudo consultar la IA.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   return (
     <Overlay onClose={() => setGoalForm(null)}>
@@ -111,6 +156,35 @@ export function GoalModal() {
           <Field label="¿Cuántas veces en la semana? (meta)">
             <input type="number" min={1} value={f.target} onChange={(e) => set('target', e.target.value)} style={inp(C)} />
           </Field>
+        ) : null}
+        {aiEnabled() ? (
+          <div>
+            <button
+              type="button"
+              onClick={suggestWithAI}
+              disabled={!valid || aiLoading}
+              style={{
+                ...ghostBtn(C),
+                width: '100%',
+                justifyContent: 'center',
+                borderColor: C.primary + '55',
+                color: C.primaryD,
+                opacity: !valid || aiLoading ? 0.55 : 1,
+              }}
+            >
+              <Icon name={aiLoading ? 'hourglass_top' : 'auto_awesome'} size={18} color={C.primary} fill />
+              {aiLoading ? 'Calculando puntos…' : 'Sugerir XP y monedas con IA'}
+            </button>
+            {aiWhy ? (
+              <div style={{ marginTop: '8px', fontSize: '12px', color: C.muted, fontWeight: 500, lineHeight: 1.4, display: 'flex', gap: '6px' }}>
+                <Icon name="tips_and_updates" size={15} color={C.gold} fill />
+                <span>{aiWhy}</span>
+              </div>
+            ) : null}
+            {aiError ? (
+              <div style={{ marginTop: '8px', fontSize: '12px', color: C.danger, fontWeight: 600 }}>{aiError}</div>
+            ) : null}
+          </div>
         ) : null}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label={'XP al completar' + (f.type !== 'weekly' ? ' (por vez)' : '')}>

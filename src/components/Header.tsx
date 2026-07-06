@@ -1,5 +1,6 @@
 import { useStore } from '../store'
 import type { Stats } from '../types'
+import { aiEnabled } from '../lib/ai'
 import { Icon, useC } from '../ui'
 
 export function Header({ s }: { s: Stats }) {
@@ -8,6 +9,7 @@ export function Header({ s }: { s: Stats }) {
   const toggleTheme = useStore((st) => st.toggleTheme)
   const toggleMuted = useStore((st) => st.toggleMuted)
   const setSettings = useStore((st) => st.setSettings)
+  const setAssistant = useStore((st) => st.setAssistant)
 
   const chip = (icon: string, label: string, val: string, bg: string, fg: string) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: bg, padding: '8px 13px', borderRadius: '13px', flexShrink: 0 }}>
@@ -77,6 +79,26 @@ export function Header({ s }: { s: Stats }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap' }}>
         {chip('paid', 'Monedas', s.coins.toLocaleString('es'), C.goldSoft, C.goldText)}
         {chip('favorite', 'Vida', s.hp + '/' + s.maxHP, C.dangerSoft, C.danger)}
+        {aiEnabled()
+          ? (
+              <button
+                onClick={() => setAssistant(true)}
+                title="Asistente IA"
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg,' + C.primary + ',#8B5CF6)',
+                  border: 'none',
+                  display: 'grid',
+                  placeItems: 'center',
+                  boxShadow: '0 6px 16px ' + C.primaryGlow,
+                }}
+              >
+                <Icon name="auto_awesome" size={20} color="#fff" fill />
+              </button>
+            )
+          : null}
         {iconBtn(d.theme === 'dark' ? 'light_mode' : 'dark_mode', 'Tema', toggleTheme)}
         {iconBtn('settings', 'Ajustes y respaldo', () => setSettings(true))}
         {iconBtn(d.muted ? 'volume_off' : 'volume_up', 'Sonido', toggleMuted)}

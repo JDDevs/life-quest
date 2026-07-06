@@ -11,6 +11,7 @@ import { AchModal } from './components/modals/AchModal'
 import { HabitModal } from './components/modals/HabitModal'
 import { AvatarModal } from './components/modals/AvatarModal'
 import { TaskModal } from './components/modals/TaskModal'
+import { AssistantModal } from './components/modals/AssistantModal'
 import { Dashboard } from './views/Dashboard'
 import { Metas } from './views/Metas'
 import { Tareas } from './views/Tareas'
@@ -50,10 +51,13 @@ export default function App() {
   }, [setNarrow])
 
   // drive the pomodoro/stopwatch timer globally so it keeps running (and can
-  // complete) even when you're on another tab of the app
+  // complete) even when you're on another tab of the app. Only the *visible*
+  // device advances/completes it, to avoid a backgrounded device double-logging
+  // a session (the timer state itself is synced via data.pomoRun).
   useEffect(() => {
     const id = setInterval(() => {
-      if (useStore.getState().pomoRun.running) useStore.getState().pomoTick()
+      if (document.visibilityState !== 'visible') return
+      if (useStore.getState().data.pomoRun.running) useStore.getState().pomoTick()
     }, 500)
     return () => clearInterval(id)
   }, [])
@@ -174,6 +178,7 @@ export default function App() {
       <HabitModal />
       <TaskModal />
       <AvatarModal />
+      <AssistantModal />
     </div>
   )
 }
