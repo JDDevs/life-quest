@@ -168,7 +168,7 @@ export function Metas(_props: { s: Stats }) {
               <div key={a.id} style={{ border: '1px solid ' + C.line, borderRadius: '14px', background: C.card, overflow: 'hidden' }}>
                 <button
                   onClick={() => toggleArea(a.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '11px', width: '100%', padding: '12px 14px', textAlign: 'left', background: 'transparent' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '11px', width: '100%', padding: '12px 14px', textAlign: 'left', background: 'transparent', color: C.text }}
                 >
                   <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: a.color + '1F', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <Icon name={a.icon} size={17} color={a.color} fill />
