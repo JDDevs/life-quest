@@ -13,11 +13,14 @@ export function GoalModal() {
   const data = useStore((s) => s.data)
   const statsFn = useStore((s) => s.stats)
   const saveGoalTemplate = useStore((s) => s.saveGoalTemplate)
+  const updateGoalTemplate = useStore((s) => s.updateGoalTemplate)
+  const deleteGoalTemplate = useStore((s) => s.deleteGoalTemplate)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiWhy, setAiWhy] = useState<string | null>(null)
   const [savedTpl, setSavedTpl] = useState(false)
   if (!f) return null
+  const isTpl = !!f.templateId
   const set = (k: string, v: unknown) => setGoalForm({ ...f, [k]: v })
   const valid = f.title.trim().length > 0
 
@@ -62,7 +65,7 @@ export function GoalModal() {
   return (
     <Overlay onClose={() => setGoalForm(null)}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-        <h3 style={{ margin: 0, fontFamily: '"Space Grotesk"', fontSize: '19px' }}>{f.id ? 'Editar meta' : 'Nueva meta'}</h3>
+        <h3 style={{ margin: 0, fontFamily: '"Space Grotesk"', fontSize: '19px' }}>{isTpl ? 'Editar plantilla' : f.id ? 'Editar meta' : 'Nueva meta'}</h3>
         <button onClick={() => setGoalForm(null)} style={{ color: C.faint }}>
           <Icon name="close" size={22} color={C.faint} />
         </button>
@@ -211,29 +214,54 @@ export function GoalModal() {
             <input type="number" min={0} value={f.penalty} onChange={(e) => set('penalty', e.target.value)} style={{ ...inp(C), borderColor: C.danger + '55' }} />
           </Field>
         ) : null}
-        <button
-          onClick={() => {
-            if (!valid) return
-            saveGoalTemplate(f)
-            setSavedTpl(true)
-            setTimeout(() => setSavedTpl(false), 1800)
-          }}
-          disabled={!valid || savedTpl}
-          style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center', color: savedTpl ? C.green : C.primaryD, borderColor: (savedTpl ? C.green : C.primary) + '55', opacity: valid ? 1 : 0.5 }}
-        >
-          <Icon name={savedTpl ? 'check' : 'bookmark_add'} size={18} color={savedTpl ? C.green : C.primary} fill={savedTpl} />
-          {savedTpl ? 'Plantilla guardada' : 'Guardar como plantilla'}
-        </button>
+        {!isTpl ? (
+          <button
+            onClick={() => {
+              if (!valid) return
+              saveGoalTemplate(f)
+              setSavedTpl(true)
+              setTimeout(() => setSavedTpl(false), 1800)
+            }}
+            disabled={!valid || savedTpl}
+            style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center', color: savedTpl ? C.green : C.primaryD, borderColor: (savedTpl ? C.green : C.primary) + '55', opacity: valid ? 1 : 0.5 }}
+          >
+            <Icon name={savedTpl ? 'check' : 'bookmark_add'} size={18} color={savedTpl ? C.green : C.primary} fill={savedTpl} />
+            {savedTpl ? 'Plantilla guardada' : 'Guardar como plantilla'}
+          </button>
+        ) : null}
         <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-          {f.id ? (
+          {isTpl ? (
+            <button
+              onClick={() => {
+                deleteGoalTemplate(f.templateId!)
+                setGoalForm(null)
+              }}
+              style={{ ...ghostBtn(C), color: C.danger, borderColor: C.dangerSoft }}
+            >
+              <Icon name="delete" size={18} color={C.danger} />
+              Eliminar
+            </button>
+          ) : f.id ? (
             <button onClick={() => deleteGoal(f.id!)} style={{ ...ghostBtn(C), color: C.danger, borderColor: C.dangerSoft }}>
               <Icon name="delete" size={18} color={C.danger} />
               Eliminar
             </button>
           ) : null}
-          <button onClick={() => valid && saveGoal(f)} disabled={!valid} style={{ ...primaryBtn(C), flex: 1, justifyContent: 'center', opacity: valid ? 1 : 0.5 }}>
+          <button
+            onClick={() => {
+              if (!valid) return
+              if (isTpl) {
+                updateGoalTemplate(f.templateId!, f)
+                setGoalForm(null)
+              } else {
+                saveGoal(f)
+              }
+            }}
+            disabled={!valid}
+            style={{ ...primaryBtn(C), flex: 1, justifyContent: 'center', opacity: valid ? 1 : 0.5 }}
+          >
             <Icon name="check" size={19} color="#fff" />
-            {f.id ? 'Guardar cambios' : 'Crear meta'}
+            {isTpl ? 'Guardar plantilla' : f.id ? 'Guardar cambios' : 'Crear meta'}
           </button>
         </div>
       </div>

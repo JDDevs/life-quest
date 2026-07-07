@@ -12,10 +12,13 @@ export function TaskModal() {
   const saveTask = useStore((s) => s.saveTask)
   const deleteTask = useStore((s) => s.deleteTask)
   const saveTaskTemplate = useStore((s) => s.saveTaskTemplate)
+  const updateTaskTemplate = useStore((s) => s.updateTaskTemplate)
+  const deleteTaskTemplate = useStore((s) => s.deleteTaskTemplate)
   const [tagDraft, setTagDraft] = useState('')
   const [subDraft, setSubDraft] = useState('')
   const [savedTpl, setSavedTpl] = useState(false)
   if (!f) return null
+  const isTpl = !!f.templateId
   const set = (k: string, v: unknown) => setTaskForm({ ...f, [k]: v })
   const valid = f.title.trim().length > 0
   const goalTitles = [
@@ -41,7 +44,7 @@ export function TaskModal() {
   return (
     <Overlay onClose={() => setTaskForm(null)}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-        <h3 style={{ margin: 0, fontFamily: '"Space Grotesk"', fontSize: '19px' }}>{f.id ? 'Editar tarea' : 'Nueva tarea'}</h3>
+        <h3 style={{ margin: 0, fontFamily: '"Space Grotesk"', fontSize: '19px' }}>{isTpl ? 'Editar plantilla' : f.id ? 'Editar tarea' : 'Nueva tarea'}</h3>
         <button onClick={() => setTaskForm(null)} style={{ color: C.faint }}>
           <Icon name="close" size={22} color={C.faint} />
         </button>
@@ -63,9 +66,11 @@ export function TaskModal() {
               ))}
             </select>
           </Field>
-          <Field label="Fecha límite (opcional)">
-            <input type="date" value={f.due || ''} onChange={(e) => set('due', e.target.value || null)} style={inp(C)} />
-          </Field>
+          {!isTpl ? (
+            <Field label="Fecha límite (opcional)">
+              <input type="date" value={f.due || ''} onChange={(e) => set('due', e.target.value || null)} style={inp(C)} />
+            </Field>
+          ) : null}
         </div>
         <Field label="Prioridad">
           <div style={{ display: 'flex', gap: '7px' }}>
@@ -180,29 +185,54 @@ export function TaskModal() {
             </div>
           </div>
         </Field>
-        <button
-          onClick={() => {
-            if (!valid) return
-            saveTaskTemplate(f)
-            setSavedTpl(true)
-            setTimeout(() => setSavedTpl(false), 1800)
-          }}
-          disabled={!valid || savedTpl}
-          style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center', color: savedTpl ? C.green : C.primaryD, borderColor: (savedTpl ? C.green : C.primary) + '55', opacity: valid ? 1 : 0.5 }}
-        >
-          <Icon name={savedTpl ? 'check' : 'bookmark_add'} size={18} color={savedTpl ? C.green : C.primary} fill={savedTpl} />
-          {savedTpl ? 'Plantilla guardada' : 'Guardar como plantilla'}
-        </button>
+        {!isTpl ? (
+          <button
+            onClick={() => {
+              if (!valid) return
+              saveTaskTemplate(f)
+              setSavedTpl(true)
+              setTimeout(() => setSavedTpl(false), 1800)
+            }}
+            disabled={!valid || savedTpl}
+            style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center', color: savedTpl ? C.green : C.primaryD, borderColor: (savedTpl ? C.green : C.primary) + '55', opacity: valid ? 1 : 0.5 }}
+          >
+            <Icon name={savedTpl ? 'check' : 'bookmark_add'} size={18} color={savedTpl ? C.green : C.primary} fill={savedTpl} />
+            {savedTpl ? 'Plantilla guardada' : 'Guardar como plantilla'}
+          </button>
+        ) : null}
         <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-          {f.id ? (
+          {isTpl ? (
+            <button
+              onClick={() => {
+                deleteTaskTemplate(f.templateId!)
+                setTaskForm(null)
+              }}
+              style={{ ...ghostBtn(C), color: C.danger, borderColor: C.dangerSoft }}
+            >
+              <Icon name="delete" size={18} color={C.danger} />
+              Eliminar
+            </button>
+          ) : f.id ? (
             <button onClick={() => deleteTask(f.id!)} style={{ ...ghostBtn(C), color: C.danger, borderColor: C.dangerSoft }}>
               <Icon name="delete" size={18} color={C.danger} />
               Eliminar
             </button>
           ) : null}
-          <button onClick={() => valid && saveTask(f)} disabled={!valid} style={{ ...primaryBtn(C), flex: 1, justifyContent: 'center', opacity: valid ? 1 : 0.5 }}>
+          <button
+            onClick={() => {
+              if (!valid) return
+              if (isTpl) {
+                updateTaskTemplate(f.templateId!, f)
+                setTaskForm(null)
+              } else {
+                saveTask(f)
+              }
+            }}
+            disabled={!valid}
+            style={{ ...primaryBtn(C), flex: 1, justifyContent: 'center', opacity: valid ? 1 : 0.5 }}
+          >
             <Icon name="check" size={19} color="#fff" />
-            {f.id ? 'Guardar' : 'Crear tarea'}
+            {isTpl ? 'Guardar plantilla' : f.id ? 'Guardar' : 'Crear tarea'}
           </button>
         </div>
       </div>

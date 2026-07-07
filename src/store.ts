@@ -46,6 +46,8 @@ export interface TaskForm {
   due: string | null
   subtasks: Subtask[]
   linkedGoal: string
+  /** When set, the TaskModal edits this template instead of a task. */
+  templateId?: string
 }
 
 // The running timer now lives inside `data` (so it syncs across devices). It is
@@ -112,6 +114,8 @@ export interface GoalForm {
   targetDays: number | string
   target: number | string
   dailyTarget: number | string
+  /** When set, the GoalModal edits this template instead of a goal. */
+  templateId?: string
 }
 export interface RewardForm {
   id?: string
@@ -262,6 +266,10 @@ interface StoreState {
   saveGoalTemplate: (f: GoalForm) => void
   deleteGoalTemplate: (id: string) => void
   useGoalTemplate: (id: string) => void
+  updateTaskTemplate: (id: string, f: TaskForm) => void
+  updateGoalTemplate: (id: string, f: GoalForm) => void
+  templatesModal: boolean
+  setTemplatesModal: (open: boolean) => void
 
   // pomodoro
   setPomoTask: (id: string | null) => void
@@ -338,6 +346,7 @@ export const useStore = create<StoreState>((set, get) => {
     taskForm: null,
     avatarModal: false,
     assistant: false,
+    templatesModal: false,
 
     syncStatus: cloudEnabled() ? 'syncing' : 'disabled',
 
@@ -1114,6 +1123,45 @@ export const useStore = create<StoreState>((set, get) => {
         },
       })
     },
+    updateTaskTemplate: (id, f) =>
+      patch((d) => {
+        const i = (d.taskTemplates || []).findIndex((t) => t.id === id)
+        if (i < 0) return
+        d.taskTemplates[i] = {
+          id,
+          name: f.title.trim(),
+          title: f.title.trim(),
+          notes: f.notes.trim(),
+          listId: f.listId,
+          tags: f.tags.map((t) => t.trim()).filter(Boolean),
+          priority: f.priority,
+          estPomos: Math.max(0, +f.estPomos || 0),
+          subtasks: f.subtasks.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim() })),
+          linkedGoal: (f.linkedGoal || '').trim() || undefined,
+        }
+      }),
+    updateGoalTemplate: (id, f) =>
+      patch((d) => {
+        const i = (d.goalTemplates || []).findIndex((t) => t.id === id)
+        if (i < 0) return
+        d.goalTemplates[i] = {
+          id,
+          name: f.title.trim(),
+          areaId: f.areaId,
+          title: f.title.trim(),
+          priority: f.priority,
+          type: f.type,
+          xp: Math.max(0, +f.xp || 0),
+          coins: Math.max(0, +f.coins || 0),
+          extraXp: Math.max(0, +f.extraXp || 0),
+          extraCoins: Math.max(0, +f.extraCoins || 0),
+          penalty: Math.max(0, +f.penalty || 0),
+          targetDays: Math.min(7, Math.max(1, +f.targetDays || 7)),
+          target: Math.max(1, +f.target || 1),
+          dailyTarget: Math.max(1, +f.dailyTarget || 1),
+        }
+      }),
+    setTemplatesModal: (open) => set({ templatesModal: open }),
 
     // ---------- pomodoro ----------
     setPomoTask: (id) => {

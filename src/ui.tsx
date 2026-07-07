@@ -210,6 +210,91 @@ export function stepBtn(C: Palette, dis?: boolean, bg?: string): CSSProperties {
   }
 }
 
+export interface CtxItem {
+  label: string
+  icon: string
+  onClick: () => void
+  danger?: boolean
+}
+
+/** Right-click context menu anchored at (x, y). Closes on outside click,
+ *  right-click, scroll, resize or Escape. */
+export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: CtxItem[]; onClose: () => void }) {
+  const C = useC()
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    const onScroll = () => onClose()
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [onClose])
+
+  const menuW = 220
+  const menuH = items.length * 40 + 12
+  const left = Math.max(8, Math.min(x, window.innerWidth - menuW - 8))
+  const top = Math.max(8, Math.min(y, window.innerHeight - menuH - 8))
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          onClose()
+        }}
+        style={{ position: 'fixed', inset: 0, zIndex: 9997 }}
+      />
+      <div
+        style={{
+          position: 'fixed',
+          left,
+          top,
+          zIndex: 9998,
+          minWidth: menuW,
+          background: C.card,
+          border: '1px solid ' + C.line2,
+          borderRadius: '12px',
+          boxShadow: '0 12px 34px rgba(0,0,0,.28)',
+          padding: '6px',
+          animation: 'popin .12s ease',
+        }}
+      >
+        {items.map((it, i) => (
+          <button
+            key={i}
+            onClick={() => {
+              it.onClick()
+              onClose()
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              width: '100%',
+              textAlign: 'left',
+              padding: '9px 10px',
+              borderRadius: '9px',
+              fontSize: '13.5px',
+              fontWeight: 600,
+              color: it.danger ? C.danger : C.text,
+            }}
+          >
+            <Icon name={it.icon} size={17} color={it.danger ? C.danger : C.muted} />
+            {it.label}
+          </button>
+        ))}
+      </div>
+    </>
+  )
+}
+
 export function Overlay({ children, onClose }: { children: ReactNode; onClose: () => void }) {
   const C = useC()
   // Clicking the backdrop no longer closes the modal (avoids losing work by a

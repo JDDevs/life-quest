@@ -12,6 +12,7 @@ import { HabitModal } from './components/modals/HabitModal'
 import { AvatarModal } from './components/modals/AvatarModal'
 import { TaskModal } from './components/modals/TaskModal'
 import { AssistantModal } from './components/modals/AssistantModal'
+import { TemplatesModal } from './components/modals/TemplatesModal'
 import { Dashboard } from './views/Dashboard'
 import { Metas } from './views/Metas'
 import { Tareas } from './views/Tareas'
@@ -179,6 +180,7 @@ export default function App() {
       <TaskModal />
       <AvatarModal />
       <AssistantModal />
+      <TemplatesModal />
     </div>
   )
 }

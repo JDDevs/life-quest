@@ -1,12 +1,12 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { TASK_PRIORITIES } from '../constants'
 import { addDays, dateKey } from '../lib/date'
-import { useStore, type TaskView } from '../store'
+import { useStore, type TaskForm, type TaskView } from '../store'
 import type { Task, TaskList } from '../types'
-import { Icon, inp, useC } from '../ui'
+import { ContextMenu, Icon, inp, useC, type CtxItem } from '../ui'
 
 function isToday(t: Task, today: string) {
   return t.due != null && t.due <= today
@@ -34,9 +34,39 @@ export function Tareas() {
   const createTaskFromTemplate = useStore((s) => s.createTaskFromTemplate)
   const deleteTaskTemplate = useStore((s) => s.deleteTaskTemplate)
   const reorderTask = useStore((s) => s.reorderTask)
+  const deleteTask = useStore((s) => s.deleteTask)
+  const saveTask = useStore((s) => s.saveTask)
+  const saveTaskTemplate = useStore((s) => s.saveTaskTemplate)
+  const setPomoTask = useStore((s) => s.setPomoTask)
+  const setView = useStore((s) => s.setView)
+  const setTemplatesModal = useStore((s) => s.setTemplatesModal)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [quick, setQuick] = useState('')
   const [showDone, setShowDone] = useState(false)
+  const [menu, setMenu] = useState<{ x: number; y: number; task: Task } | null>(null)
+
+  const taskToForm = (t: Task): TaskForm => ({
+    title: t.title,
+    notes: t.notes,
+    listId: t.listId,
+    tags: [...t.tags],
+    priority: t.priority,
+    estPomos: t.estPomos,
+    due: t.due,
+    subtasks: t.subtasks.map((s) => ({ ...s })),
+    linkedGoal: t.linkedGoal || '',
+  })
+  const openMenu = (e: MouseEvent, task: Task) => {
+    e.preventDefault()
+    setMenu({ x: e.clientX, y: e.clientY, task })
+  }
+  const taskMenuItems = (t: Task): CtxItem[] => [
+    { label: 'Editar', icon: 'edit', onClick: () => openTaskForm(t) },
+    { label: 'Enfocar (Pomodoro)', icon: 'play_circle', onClick: () => { setPomoTask(t.id); setView('pomodoro') } },
+    { label: 'Duplicar', icon: 'content_copy', onClick: () => saveTask({ ...taskToForm(t), title: t.title + ' (copia)' }) },
+    { label: 'Guardar como plantilla', icon: 'bookmark_add', onClick: () => saveTaskTemplate(taskToForm(t)) },
+    { label: 'Eliminar', icon: 'delete', danger: true, onClick: () => deleteTask(t.id) },
+  ]
 
   const templates = d.taskTemplates || []
   const slashMode = quick.startsWith('/')
@@ -219,6 +249,19 @@ export function Tareas() {
                       )
                     })
                   )}
+                  <div style={{ borderTop: '1px solid ' + C.line, marginTop: '4px', paddingTop: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTemplatesModal(true)
+                        setQuick('')
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px', borderRadius: '9px', color: C.muted, fontWeight: 700, fontSize: '12.5px' }}
+                    >
+                      <Icon name="settings" size={15} color={C.muted} />
+                      Gestionar plantillas
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -254,7 +297,7 @@ export function Tareas() {
                   <SortableContext items={list.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     <div style={{ display: 'grid', gap: '8px' }}>
                       {list.map((t) => (
-                        <SortableTaskRow key={t.id} t={t} />
+                        <SortableTaskRow key={t.id} t={t} onMenu={(e) => openMenu(e, t)} />
                       ))}
                     </div>
                   </SortableContext>
@@ -272,7 +315,7 @@ export function Tareas() {
               {showDone ? (
                 <div style={{ display: 'grid', gap: '8px' }}>
                   {doneTasks.map((t) => (
-                    <TaskRow key={t.id} t={t} />
+                    <TaskRow key={t.id} t={t} onMenu={(e) => openMenu(e, t)} />
                   ))}
                 </div>
               ) : null}
@@ -280,11 +323,12 @@ export function Tareas() {
           ) : null}
         </div>
       </div>
+      {menu ? <ContextMenu x={menu.x} y={menu.y} items={taskMenuItems(menu.task)} onClose={() => setMenu(null)} /> : null}
     </div>
   )
 }
 
-function SortableTaskRow({ t }: { t: Task }) {
+function SortableTaskRow({ t, onMenu }: { t: Task; onMenu?: (e: MouseEvent) => void }) {
   const C = useC()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: t.id })
   const style: CSSProperties = {
@@ -299,19 +343,19 @@ function SortableTaskRow({ t }: { t: Task }) {
       {...attributes}
       {...listeners}
       title="Arrastrar para reordenar"
-      style={{ cursor: 'grab', color: C.faint, touchAction: 'none', display: 'grid', placeItems: 'center', width: '22px', height: '24px', flexShrink: 0, marginTop: '1px' }}
+      style={{ cursor: 'grab', color: C.faint, touchAction: 'none', display: 'grid', placeItems: 'center', width: '22px', height: '24px', flexShrink: 0 }}
     >
       <Icon name="drag_indicator" size={17} color={C.faint} />
     </button>
   )
   return (
     <div ref={setNodeRef} style={style}>
-      <TaskRow t={t} handle={handle} />
+      <TaskRow t={t} handle={handle} onMenu={onMenu} />
     </div>
   )
 }
 
-function TaskRow({ t, handle }: { t: Task; handle?: ReactNode }) {
+function TaskRow({ t, handle, onMenu }: { t: Task; handle?: ReactNode; onMenu?: (e: MouseEvent) => void }) {
   const C = useC()
   const d = useStore((s) => s.data)
   const toggleTask = useStore((s) => s.toggleTask)
@@ -328,6 +372,7 @@ function TaskRow({ t, handle }: { t: Task; handle?: ReactNode }) {
 
   return (
     <div
+      onContextMenu={onMenu}
       style={{
         background: C.card,
         border: '1px solid ' + C.line,
@@ -336,7 +381,7 @@ function TaskRow({ t, handle }: { t: Task; handle?: ReactNode }) {
         padding: '12px 14px',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {handle}
         <button
           onClick={() => toggleTask(t.id)}
@@ -350,7 +395,6 @@ function TaskRow({ t, handle }: { t: Task; handle?: ReactNode }) {
             display: 'grid',
             placeItems: 'center',
             flexShrink: 0,
-            marginTop: '1px',
           }}
         >
           {t.done ? <Icon name="check" size={15} color="#fff" fill /> : null}

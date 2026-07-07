@@ -1,14 +1,14 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { AREAS, type Area } from '../constants'
 import { weekLabel } from '../lib/date'
 import { goalUnits } from '../lib/goals'
-import { useStore } from '../store'
+import { useStore, type GoalForm } from '../store'
 import type { Goal, Stats } from '../types'
 import { WeekReminder } from '../components/WeekReminder'
-import { Card, Icon, SectionTitle, ghostBtn, primaryBtn, stepBtn, useC } from '../ui'
+import { Card, ContextMenu, Icon, SectionTitle, ghostBtn, primaryBtn, stepBtn, useC, type CtxItem } from '../ui'
 
 const COLLAPSE_KEY = 'metas_collapsed'
 
@@ -30,10 +30,40 @@ export function Metas(_props: { s: Stats }) {
   const reorderGoal = useStore((st) => st.reorderGoal)
   const useGoalTemplate = useStore((st) => st.useGoalTemplate)
   const deleteGoalTemplate = useStore((st) => st.deleteGoalTemplate)
+  const deleteGoal = useStore((st) => st.deleteGoal)
+  const saveGoal = useStore((st) => st.saveGoal)
+  const saveGoalTemplate = useStore((st) => st.saveGoalTemplate)
+  const setTemplatesModal = useStore((st) => st.setTemplatesModal)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const goals = curGoals()
   const goalTemplates = d.goalTemplates || []
   const [showTpl, setShowTpl] = useState(false)
+  const [menu, setMenu] = useState<{ x: number; y: number; goal: Goal } | null>(null)
+
+  const goalToForm = (g: Goal): GoalForm => ({
+    areaId: g.areaId,
+    title: g.title,
+    priority: g.priority,
+    type: g.type,
+    xp: g.xp,
+    coins: g.coins ?? g.xp,
+    extraXp: g.extraXp ?? 0,
+    extraCoins: g.extraCoins ?? 0,
+    penalty: g.penalty,
+    targetDays: g.targetDays ?? 7,
+    target: g.target ?? 3,
+    dailyTarget: g.dailyTarget ?? 3,
+  })
+  const openMenu = (e: MouseEvent, goal: Goal) => {
+    e.preventDefault()
+    setMenu({ x: e.clientX, y: e.clientY, goal })
+  }
+  const goalMenuItems = (g: Goal): CtxItem[] => [
+    { label: 'Editar', icon: 'edit', onClick: () => openGoalForm(g) },
+    { label: 'Duplicar', icon: 'content_copy', onClick: () => saveGoal({ ...goalToForm(g), title: g.title + ' (copia)' }) },
+    { label: 'Guardar como plantilla', icon: 'bookmark_add', onClick: () => saveGoalTemplate(goalToForm(g)) },
+    { label: 'Eliminar', icon: 'delete', danger: true, onClick: () => deleteGoal(g.id) },
+  ]
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapsed)
   const persist = (next: Record<string, boolean>) => {
@@ -134,6 +164,18 @@ export function Metas(_props: { s: Stats }) {
                     )
                   })
                 )}
+                <div style={{ borderTop: '1px solid ' + C.line, marginTop: '4px', paddingTop: '4px' }}>
+                  <button
+                    onClick={() => {
+                      setTemplatesModal(true)
+                      setShowTpl(false)
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px', borderRadius: '9px', color: C.muted, fontWeight: 700, fontSize: '12.5px' }}
+                  >
+                    <Icon name="settings" size={15} color={C.muted} />
+                    Gestionar plantillas
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>
@@ -200,7 +242,7 @@ export function Metas(_props: { s: Stats }) {
                     <SortableContext items={list.map((g) => g.id)} strategy={verticalListSortingStrategy}>
                       <div style={{ display: 'grid', gap: '10px', padding: '0 12px 12px' }}>
                         {list.map((g) => (
-                          <SortableGoalRow key={g.id} g={g} a={a} />
+                          <SortableGoalRow key={g.id} g={g} a={a} onMenu={(e) => openMenu(e, g)} />
                         ))}
                       </div>
                     </SortableContext>
@@ -212,6 +254,7 @@ export function Metas(_props: { s: Stats }) {
         </div>
       )}
       <BadHabits />
+      {menu ? <ContextMenu x={menu.x} y={menu.y} items={goalMenuItems(menu.goal)} onClose={() => setMenu(null)} /> : null}
     </div>
   )
 }
@@ -269,7 +312,7 @@ function EmptyMetas({ onCreate, onImport }: { onCreate: () => void; onImport: ()
   )
 }
 
-function SortableGoalRow({ g, a }: { g: Goal; a: Area }) {
+function SortableGoalRow({ g, a, onMenu }: { g: Goal; a: Area; onMenu?: (e: MouseEvent) => void }) {
   const C = useC()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: g.id })
   const style: CSSProperties = {
@@ -291,12 +334,12 @@ function SortableGoalRow({ g, a }: { g: Goal; a: Area }) {
   )
   return (
     <div ref={setNodeRef} style={style}>
-      <GoalRow g={g} a={a} handle={handle} />
+      <GoalRow g={g} a={a} handle={handle} onMenu={onMenu} />
     </div>
   )
 }
 
-function GoalRow({ g, a, handle }: { g: Goal; a: Area; handle?: ReactNode }) {
+function GoalRow({ g, a, handle, onMenu }: { g: Goal; a: Area; handle?: ReactNode; onMenu?: (e: MouseEvent) => void }) {
   const C = useC()
   const openGoalForm = useStore((st) => st.openGoalForm)
   const setView = useStore((st) => st.setView)
@@ -309,6 +352,7 @@ function GoalRow({ g, a, handle }: { g: Goal; a: Area; handle?: ReactNode }) {
   const linkPct = linked.length ? Math.round((linkedDone / linked.length) * 100) : 0
   return (
     <div
+      onContextMenu={onMenu}
       style={{
         background: C.card,
         border: '1px solid ' + (done ? a.color + '55' : C.line),
