@@ -54,22 +54,16 @@ export function Header({ s }: { s: Stats }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '13px' }}>
-        <div
-          style={{
-            width: '46px',
-            height: '46px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg,' + C.primary + ',#8B5CF6)',
-            display: 'grid',
-            placeItems: 'center',
-            boxShadow: '0 8px 20px ' + C.primaryGlow,
-          }}
-        >
-          <Icon name="swords" size={26} color="#fff" fill />
-        </div>
+        <img
+          src={import.meta.env.BASE_URL + 'icon.svg'}
+          alt="Life Quest"
+          width={46}
+          height={46}
+          style={{ borderRadius: '14px', boxShadow: '0 8px 20px ' + C.primaryGlow, display: 'block', flexShrink: 0 }}
+        />
         <div>
           <div style={{ fontFamily: '"Space Grotesk"', fontWeight: 700, fontSize: '19px', letterSpacing: '-.3px' }}>
-            Mi Camino
+            Life Quest
           </div>
           <div style={{ fontSize: '12px', color: C.muted, fontWeight: 600 }}>
             Nivel {s.level} · {s.rank}

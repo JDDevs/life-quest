@@ -1,4 +1,4 @@
-# Desplegar “Mi Camino” gratis (uso personal)
+# Desplegar “Life Quest” gratis (uso personal)
 
 La app es un sitio estático (React + Vite) con **sincronización opcional en la
 nube** mediante **Neon** (Postgres gratis) + una **función serverless en Vercel**.
@@ -23,7 +23,7 @@ No necesitas crear tablas a mano: la función las crea sola la primera vez.
 
 ## 2) Sube el código a GitHub
 
-Usa GitHub Desktop o la terminal. Crea un repo `mi-camino` con este proyecto.
+Usa GitHub Desktop o la terminal. Crea un repo `life-quest` con este proyecto.
 
 ## 3) Publica en Vercel
 

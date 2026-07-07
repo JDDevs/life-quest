@@ -1,8 +1,8 @@
 {
-  "name": "mi-camino",
+  "name": "life-quest",
   "version": "1.0.0",
   "private": true,
-  "description": "Mi Camino — sistema de crecimiento personal gamificado (RPG-tamagotchi)",
+  "description": "Life Quest — sistema de crecimiento personal gamificado (RPG-tamagotchi)",
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-engine.mjs",

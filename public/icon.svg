@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Life Quest">
+  <defs>
+    <linearGradient id="lq-bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6D5AE6" />
+      <stop offset="1" stop-color="#8B5CF6" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#lq-bg)" />
+  <!-- quest-marker pin -->
+  <path d="M256 80C320 80 372 132 372 196 372 250 300 360 256 416 212 360 140 250 140 196 140 132 192 80 256 80Z" fill="#ffffff" />
+  <!-- star cut out of the pin (shows the gradient beneath) -->
+  <path d="M256 144 268.94 178.2 305.45 179.93 276.92 202.8 286.58 238.07 256 218 225.42 238.07 235.08 202.8 206.55 179.93 243.06 178.2Z" fill="url(#lq-bg)" />
+</svg>

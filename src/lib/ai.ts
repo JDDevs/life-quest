@@ -155,7 +155,7 @@ function num(v: unknown, min: number, max: number, fallback: number): number {
 
 export async function suggestGoalPoints(draft: GoalDraft, d: AppData, s: Stats): Promise<GoalSuggestion> {
   const system = [
-    "Eres el asistente de balance de 'Mi Camino', un sistema de hábitos gamificado (RPG).",
+    "Eres el asistente de balance de 'Life Quest', un sistema de hábitos gamificado (RPG).",
     'Tu tarea: asignar XP, monedas y penalización coherentes para UNA meta.',
     calibration(s),
     'Devuelve SOLO el JSON pedido. `rationale` es una frase corta en español explicando el porqué.',
@@ -270,7 +270,7 @@ function normalizeProposed(raw: Partial<ProposedGoal>): ProposedGoal {
 export async function proposeGoals(d: AppData, s: Stats, focusAreaId?: string): Promise<ProposedGoal[]> {
   const focus = focusAreaId && AREAS.some((a) => a.id === focusAreaId) ? areaName(focusAreaId) : null
   const system = [
-    "Eres el coach de 'Mi Camino', un sistema de hábitos gamificado (RPG) en español.",
+    "Eres el coach de 'Life Quest', un sistema de hábitos gamificado (RPG) en español.",
     'Propón entre 3 y 5 metas NUEVAS, concretas y alcanzables en una semana.',
     'Ten en cuenta el nivel, las áreas y las metas que YA existen: no repitas ni propongas nada desproporcionado.',
     'Prefiere metas medibles y específicas. Reparte entre áreas poco atendidas si tiene sentido.',
@@ -300,7 +300,7 @@ export async function proposeGoals(d: AppData, s: Stats, focusAreaId?: string): 
 
 export async function assistantChat(history: AIMessage[], userMsg: string, d: AppData, s: Stats): Promise<string> {
   const system = [
-    "Eres el asistente personal de 'Mi Camino', un sistema de crecimiento personal gamificado (RPG-tamagotchi) en español.",
+    "Eres el asistente personal de 'Life Quest', un sistema de crecimiento personal gamificado (RPG-tamagotchi) en español.",
     'Ayudas al usuario a definir metas, mantener hábitos, entender el sistema (XP, monedas, vida, niveles, áreas) y motivarte con cabeza (sin frases vacías).',
     'Responde SIEMPRE en español, claro y breve (2–6 frases salvo que pidan más). Usa el contexto real del jugador; no inventes datos que no tienes.',
     'Si sugieres metas, usa números coherentes con la calibración.',

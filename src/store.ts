@@ -822,7 +822,7 @@ export const useStore = create<StoreState>((set, get) => {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'mi-camino-respaldo-' + dateKey(new Date()) + '.json'
+        a.download = 'life-quest-respaldo-' + dateKey(new Date()) + '.json'
         document.body.appendChild(a)
         a.click()
         a.remove()

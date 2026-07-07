@@ -7,7 +7,7 @@ import { Icon, Overlay, ghostBtn, inp, primaryBtn, useC } from '../../ui'
 
 const GREETING: AIMessage = {
   role: 'model',
-  text: 'Hola 👋 Soy tu asistente de Mi Camino. Puedo proponerte metas coherentes con tu nivel, calibrar XP y monedas, o ayudarte a organizar la semana. ¿En qué área quieres enfocarte?',
+  text: 'Hola 👋 Soy tu asistente de Life Quest. Puedo proponerte metas coherentes con tu nivel, calibrar XP y monedas, o ayudarte a organizar la semana. ¿En qué área quieres enfocarte?',
 }
 
 export function AssistantModal() {
