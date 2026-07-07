@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { TASK_PRIORITIES } from '../../constants'
 import { useStore } from '../../store'
 import type { TaskPriority } from '../../types'
 import { Field, Icon, Overlay, ghostBtn, inp, primaryBtn, useC } from '../../ui'
+
+const MarkdownEditor = lazy(() => import('../MarkdownEditor'))
 
 export function TaskModal() {
   const C = useC()
@@ -53,8 +55,10 @@ export function TaskModal() {
         <Field label="Título">
           <input value={f.title} autoFocus placeholder="¿Qué hay que hacer?" onChange={(e) => set('title', e.target.value)} style={inp(C)} />
         </Field>
-        <Field label="Notas (opcional)">
-          <textarea rows={2} value={f.notes} placeholder="Detalles, contexto…" onChange={(e) => set('notes', e.target.value)} style={inp(C)} />
+        <Field label="Descripción">
+          <Suspense fallback={<textarea rows={4} value={f.notes} onChange={(e) => set('notes', e.target.value)} style={inp(C)} />}>
+            <MarkdownEditor value={f.notes} onChange={(v) => set('notes', v)} placeholder="Detalles, contexto… Markdown + pega imágenes con Ctrl+V." />
+          </Suspense>
         </Field>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label="Lista">

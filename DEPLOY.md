@@ -36,6 +36,11 @@ Usa GitHub Desktop o la terminal. Crea un repo `mi-camino` con este proyecto.
    | `DATABASE_URL` | Server | la cadena de conexión de Neon |
    | `VITE_SYNC_ID` | Build/Client | un texto largo y secreto (tu “contraseña” de sync) |
    | `GEMINI_API_KEY` | Server | (opcional) tu API key de Google Gemini, para el asistente y el tutor de ajedrez |
+   | `R2_ACCOUNT_ID` | Server | (opcional) account id de Cloudflare, para imágenes en las tareas |
+   | `R2_ACCESS_KEY_ID` | Server | (opcional) access key del API token de R2 |
+   | `R2_SECRET_ACCESS_KEY` | Server | (opcional) secret access key del API token de R2 |
+   | `R2_BUCKET` | Server | (opcional) nombre del bucket R2 |
+   | `R2_PUBLIC_URL` | Server | (opcional) URL pública del bucket (r2.dev o dominio propio) |
 
 4. **Deploy**. Vercel publica el sitio **y** las funciones `api/state.js` y `api/ai.js` juntas.
 
@@ -70,6 +75,36 @@ de ajedrez** (explicaciones en lenguaje natural) usan Google Gemini:
 > El motor de ajedrez (Stockfish) corre **local en el navegador** (`public/engine/`,
 > se copia solo antes de cada build) y no consume la cuota de Gemini: solo las
 > explicaciones en texto usan la IA.
+
+## Imágenes en las tareas (Cloudflare R2) — opcional
+
+Las **descripciones de tareas** aceptan Markdown y permiten **pegar imágenes con
+Ctrl+V**, arrastrarlas o subirlas con el botón. Las imágenes viven en Cloudflare
+R2 (no en el JSON de sincronización). Las llaves quedan **solo en el servidor**:
+la función `api/upload-url.js` firma una URL temporal y el navegador sube directo
+a R2.
+
+1. En <https://dash.cloudflare.com> → **R2** → activa R2 (pide agregar una
+   tarjeta, aunque no cobra dentro del plan gratuito) y **crea un bucket**.
+2. En el bucket → **Settings**:
+   - **Public access**: habilítalo y copia la **URL pública** (`https://pub-….r2.dev`)
+     — esa es `R2_PUBLIC_URL`. (O conecta un dominio propio.)
+   - **CORS policy**: añade una regla que permita el método **PUT** desde el
+     origen de tu sitio (tu dominio de Vercel), p. ej.:
+     ```json
+     [{ "AllowedOrigins": ["https://TU-APP.vercel.app"],
+        "AllowedMethods": ["PUT"], "AllowedHeaders": ["*"] }]
+     ```
+3. **R2 → Manage R2 API Tokens → Create API Token** con permiso *Object Read &
+   Write*. Copia **Access Key ID** y **Secret Access Key**. Toma también tu
+   **Account ID** (visible en la página de R2).
+4. Añade en Vercel (**Server**) — y en tu `.env` local para `vercel dev`:
+   `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`,
+   `R2_PUBLIC_URL`. Requiere también `VITE_SYNC_ID` (protege el endpoint).
+5. **Redeploy**.
+
+> Sin estas variables, la descripción sigue funcionando con Markdown y texto;
+> solo se ocultan las opciones de imagen. R2 no tiene costo de egress.
 
 ## Desarrollo local
 
