@@ -255,6 +255,14 @@ interface StoreState {
   addList: (name: string, icon: string, color: string) => void
   deleteList: (id: string) => void
 
+  // templates
+  saveTaskTemplate: (f: TaskForm) => void
+  deleteTaskTemplate: (id: string) => void
+  createTaskFromTemplate: (id: string) => void
+  saveGoalTemplate: (f: GoalForm) => void
+  deleteGoalTemplate: (id: string) => void
+  useGoalTemplate: (id: string) => void
+
   // pomodoro
   setPomoTask: (id: string | null) => void
   setPomoMode: (m: 'pomo' | 'stopwatch') => void
@@ -1009,6 +1017,101 @@ export const useStore = create<StoreState>((set, get) => {
         data.tasks.forEach((t) => {
           if (t.listId === id) t.listId = 'inbox'
         })
+      })
+    },
+
+    // ---------- templates ----------
+    saveTaskTemplate: (f) => {
+      if (!f.title.trim()) return
+      patch((d) => {
+        d.taskTemplates = d.taskTemplates || []
+        d.taskTemplates.push({
+          id: 'tt' + Date.now() + Math.random().toString(36).slice(2, 5),
+          name: f.title.trim(),
+          title: f.title.trim(),
+          notes: f.notes.trim(),
+          listId: f.listId,
+          tags: f.tags.map((t) => t.trim()).filter(Boolean),
+          priority: f.priority,
+          estPomos: Math.max(0, +f.estPomos || 0),
+          subtasks: f.subtasks.filter((s) => s.title.trim()).map((s) => ({ title: s.title.trim() })),
+          linkedGoal: (f.linkedGoal || '').trim() || undefined,
+        })
+      })
+    },
+    deleteTaskTemplate: (id) =>
+      patch((d) => {
+        d.taskTemplates = (d.taskTemplates || []).filter((t) => t.id !== id)
+      }),
+    createTaskFromTemplate: (id) => {
+      const tpl = (get().data.taskTemplates || []).find((t) => t.id === id)
+      if (!tpl) return
+      const tv = get().taskView
+      const due = tv === 'today' ? dateKey(new Date()) : null
+      apply((data) => {
+        data.tasks.push({
+          id: 't' + Date.now() + Math.random().toString(36).slice(2, 5),
+          title: tpl.title,
+          notes: tpl.notes,
+          listId: tpl.listId,
+          tags: [...tpl.tags],
+          priority: tpl.priority,
+          estPomos: tpl.estPomos,
+          spentPomos: 0,
+          focusMinutes: 0,
+          due,
+          done: false,
+          doneDate: null,
+          createdAt: dateKey(new Date()),
+          subtasks: tpl.subtasks.map((s) => ({ id: 's' + Date.now() + Math.random().toString(36).slice(2, 4), title: s.title, done: false })),
+          linkedGoal: tpl.linkedGoal || undefined,
+        })
+      })
+    },
+    saveGoalTemplate: (f) => {
+      if (!f.title.trim()) return
+      patch((d) => {
+        d.goalTemplates = d.goalTemplates || []
+        d.goalTemplates.push({
+          id: 'gt' + Date.now() + Math.random().toString(36).slice(2, 5),
+          name: f.title.trim(),
+          areaId: f.areaId,
+          title: f.title.trim(),
+          priority: f.priority,
+          type: f.type,
+          xp: Math.max(0, +f.xp || 0),
+          coins: Math.max(0, +f.coins || 0),
+          extraXp: Math.max(0, +f.extraXp || 0),
+          extraCoins: Math.max(0, +f.extraCoins || 0),
+          penalty: Math.max(0, +f.penalty || 0),
+          targetDays: Math.min(7, Math.max(1, +f.targetDays || 7)),
+          target: Math.max(1, +f.target || 1),
+          dailyTarget: Math.max(1, +f.dailyTarget || 1),
+        })
+      })
+    },
+    deleteGoalTemplate: (id) =>
+      patch((d) => {
+        d.goalTemplates = (d.goalTemplates || []).filter((t) => t.id !== id)
+      }),
+    useGoalTemplate: (id) => {
+      const tpl = (get().data.goalTemplates || []).find((t) => t.id === id)
+      if (!tpl) return
+      set({
+        goalForm: {
+          areaId: tpl.areaId,
+          title: tpl.title,
+          priority: tpl.priority,
+          type: tpl.type,
+          xp: tpl.xp,
+          coins: tpl.coins,
+          extraXp: tpl.extraXp,
+          extraCoins: tpl.extraCoins,
+          penalty: tpl.penalty,
+          targetDays: tpl.targetDays,
+          target: tpl.target,
+          dailyTarget: tpl.dailyTarget,
+        },
       })
     },
 

@@ -61,6 +61,38 @@ export interface TaskList {
   color: string
 }
 
+/** Reusable task blueprint. Insert it from the quick-add via the `/` command. */
+export interface TaskTemplate {
+  id: string
+  name: string
+  title: string
+  notes: string
+  listId: string
+  tags: string[]
+  priority: TaskPriority
+  estPomos: number
+  subtasks: { title: string }[]
+  linkedGoal?: string
+}
+
+/** Reusable goal blueprint. Insert it from the "Plantillas" picker in Metas. */
+export interface GoalTemplate {
+  id: string
+  name: string
+  areaId: string
+  title: string
+  priority: GoalPriority
+  type: GoalType
+  xp: number
+  coins: number
+  extraXp: number
+  extraCoins: number
+  penalty: number
+  targetDays: number
+  target: number
+  dailyTarget: number
+}
+
 export interface PomoSettings {
   workMin: number
   breakMin: number
@@ -201,6 +233,8 @@ export interface AppData {
   pomoSettings: PomoSettings
   pomoSessions: PomoSession[]
   pomoRun: PomoRun
+  taskTemplates: TaskTemplate[]
+  goalTemplates: GoalTemplate[]
 }
 
 export interface LevelInfo {

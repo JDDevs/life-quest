@@ -31,10 +31,26 @@ export function Tareas() {
   const setTaskView = useStore((s) => s.setTaskView)
   const openTaskForm = useStore((s) => s.openTaskForm)
   const quickAddTask = useStore((s) => s.quickAddTask)
+  const createTaskFromTemplate = useStore((s) => s.createTaskFromTemplate)
+  const deleteTaskTemplate = useStore((s) => s.deleteTaskTemplate)
   const reorderTask = useStore((s) => s.reorderTask)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [quick, setQuick] = useState('')
   const [showDone, setShowDone] = useState(false)
+
+  const templates = d.taskTemplates || []
+  const slashMode = quick.startsWith('/')
+  const tplFilter = slashMode ? quick.slice(1).toLowerCase().trim() : ''
+  const tplMatches = slashMode ? templates.filter((t) => t.name.toLowerCase().includes(tplFilter)) : []
+  const submitQuick = () => {
+    if (slashMode) {
+      if (tplMatches.length) createTaskFromTemplate(tplMatches[0].id)
+      setQuick('')
+      return
+    }
+    quickAddTask(quick)
+    setQuick('')
+  }
 
   const today = dateKey(new Date())
   const plus7 = addDays(today, 7)
@@ -124,21 +140,87 @@ export function Tareas() {
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              quickAddTask(quick)
-              setQuick('')
+              submitQuick()
             }}
             style={{ display: 'flex', gap: '9px', marginBottom: '18px' }}
           >
             <div style={{ position: 'relative', flex: 1 }}>
               <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)' }}>
-                <Icon name="add" size={20} color={C.faint} />
+                <Icon name={slashMode ? 'bookmark' : 'add'} size={20} color={slashMode ? C.primary : C.faint} fill={slashMode} />
               </span>
               <input
                 value={quick}
                 onChange={(e) => setQuick(e.target.value)}
-                placeholder="Agregar una tarea…"
+                placeholder="Agregar una tarea…  (escribe / para plantillas)"
                 style={{ ...inp(C), paddingLeft: '40px' }}
               />
+              {slashMode ? (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    left: 0,
+                    right: 0,
+                    zIndex: 60,
+                    background: C.card,
+                    border: '1px solid ' + C.line2,
+                    borderRadius: '12px',
+                    boxShadow: '0 12px 30px rgba(0,0,0,.18)',
+                    padding: '6px',
+                    maxHeight: '280px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  <div style={{ fontSize: '10.5px', fontWeight: 800, color: C.faint, textTransform: 'uppercase', letterSpacing: '.5px', padding: '6px 8px 4px' }}>
+                    Plantillas de tareas
+                  </div>
+                  {templates.length === 0 ? (
+                    <div style={{ fontSize: '12.5px', color: C.faint, fontWeight: 600, padding: '6px 8px 8px' }}>
+                      Aún no tienes plantillas. Guarda una desde el editor de tareas (⚙️ → Guardar como plantilla).
+                    </div>
+                  ) : tplMatches.length === 0 ? (
+                    <div style={{ fontSize: '12.5px', color: C.faint, fontWeight: 600, padding: '6px 8px 8px' }}>Ninguna plantilla coincide.</div>
+                  ) : (
+                    tplMatches.map((tpl, i) => {
+                      const pr = TASK_PRIORITIES.find((p) => p.id === tpl.priority)
+                      return (
+                        <div
+                          key={tpl.id}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', borderRadius: '9px', background: i === 0 ? C.primarySoft : 'transparent' }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              createTaskFromTemplate(tpl.id)
+                              setQuick('')
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '9px', flex: 1, minWidth: 0, textAlign: 'left' }}
+                          >
+                            <span style={{ width: '8px', height: '8px', borderRadius: '3px', background: pr?.color || C.muted, flexShrink: 0 }} />
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ display: 'block', fontWeight: 700, fontSize: '13.5px', color: i === 0 ? C.primaryD : C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tpl.name}</span>
+                              <span style={{ display: 'block', fontSize: '11px', color: C.faint, fontWeight: 600 }}>
+                                {(pr?.name || '')}
+                                {tpl.subtasks.length ? ' · ' + tpl.subtasks.length + ' subtareas' : ''}
+                                {tpl.estPomos ? ' · ' + tpl.estPomos + ' pomos' : ''}
+                              </span>
+                            </span>
+                            {i === 0 ? <span style={{ fontSize: '10px', fontWeight: 800, color: C.primary, background: '#fff', padding: '2px 6px', borderRadius: '5px', flexShrink: 0 }}>⏎</span> : null}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteTaskTemplate(tpl.id)}
+                            title="Eliminar plantilla"
+                            style={{ color: C.faint, display: 'grid', placeItems: 'center', width: '26px', height: '26px', flexShrink: 0 }}
+                          >
+                            <Icon name="delete" size={15} color={C.faint} />
+                          </button>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              ) : null}
             </div>
             <button type="button" onClick={() => openTaskForm()} title="Más opciones" style={{ width: '44px', borderRadius: '11px', border: '1px solid ' + C.line2, background: C.card, display: 'grid', placeItems: 'center', color: C.muted }}>
               <Icon name="tune" size={20} color={C.muted} />

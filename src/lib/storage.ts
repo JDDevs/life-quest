@@ -40,6 +40,8 @@ export function seed(): AppData {
     pomoSettings: { ...DEFAULT_POMO_SETTINGS },
     pomoSessions: [],
     pomoRun: { running: false, mode: 'pomo', phase: 'work', cycle: 0, taskId: null, anchorTs: null, baseSec: DEFAULT_POMO_SETTINGS.workMin * 60, loggedSec: 0 },
+    taskTemplates: [],
+    goalTemplates: [],
   }
 }
 
@@ -77,6 +79,8 @@ export function migrate(input: Partial<AppData>): AppData {
     loggedSec: 0,
   }
   if (d.pomoRun.loggedSec === undefined) d.pomoRun.loggedSec = 0
+  d.taskTemplates = d.taskTemplates || []
+  d.goalTemplates = d.goalTemplates || []
   if (!d.currentWeek) {
     const wk = mondayKey(new Date())
     d.currentWeek = wk

@@ -12,9 +12,11 @@ export function GoalModal() {
   const deleteGoal = useStore((s) => s.deleteGoal)
   const data = useStore((s) => s.data)
   const statsFn = useStore((s) => s.stats)
+  const saveGoalTemplate = useStore((s) => s.saveGoalTemplate)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiWhy, setAiWhy] = useState<string | null>(null)
+  const [savedTpl, setSavedTpl] = useState(false)
   if (!f) return null
   const set = (k: string, v: unknown) => setGoalForm({ ...f, [k]: v })
   const valid = f.title.trim().length > 0
@@ -209,6 +211,19 @@ export function GoalModal() {
             <input type="number" min={0} value={f.penalty} onChange={(e) => set('penalty', e.target.value)} style={{ ...inp(C), borderColor: C.danger + '55' }} />
           </Field>
         ) : null}
+        <button
+          onClick={() => {
+            if (!valid) return
+            saveGoalTemplate(f)
+            setSavedTpl(true)
+            setTimeout(() => setSavedTpl(false), 1800)
+          }}
+          disabled={!valid || savedTpl}
+          style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center', color: savedTpl ? C.green : C.primaryD, borderColor: (savedTpl ? C.green : C.primary) + '55', opacity: valid ? 1 : 0.5 }}
+        >
+          <Icon name={savedTpl ? 'check' : 'bookmark_add'} size={18} color={savedTpl ? C.green : C.primary} fill={savedTpl} />
+          {savedTpl ? 'Plantilla guardada' : 'Guardar como plantilla'}
+        </button>
         <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
           {f.id ? (
             <button onClick={() => deleteGoal(f.id!)} style={{ ...ghostBtn(C), color: C.danger, borderColor: C.dangerSoft }}>

@@ -11,8 +11,10 @@ export function TaskModal() {
   const setTaskForm = useStore((s) => s.setTaskForm)
   const saveTask = useStore((s) => s.saveTask)
   const deleteTask = useStore((s) => s.deleteTask)
+  const saveTaskTemplate = useStore((s) => s.saveTaskTemplate)
   const [tagDraft, setTagDraft] = useState('')
   const [subDraft, setSubDraft] = useState('')
+  const [savedTpl, setSavedTpl] = useState(false)
   if (!f) return null
   const set = (k: string, v: unknown) => setTaskForm({ ...f, [k]: v })
   const valid = f.title.trim().length > 0
@@ -178,6 +180,19 @@ export function TaskModal() {
             </div>
           </div>
         </Field>
+        <button
+          onClick={() => {
+            if (!valid) return
+            saveTaskTemplate(f)
+            setSavedTpl(true)
+            setTimeout(() => setSavedTpl(false), 1800)
+          }}
+          disabled={!valid || savedTpl}
+          style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center', color: savedTpl ? C.green : C.primaryD, borderColor: (savedTpl ? C.green : C.primary) + '55', opacity: valid ? 1 : 0.5 }}
+        >
+          <Icon name={savedTpl ? 'check' : 'bookmark_add'} size={18} color={savedTpl ? C.green : C.primary} fill={savedTpl} />
+          {savedTpl ? 'Plantilla guardada' : 'Guardar como plantilla'}
+        </button>
         <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
           {f.id ? (
             <button onClick={() => deleteTask(f.id!)} style={{ ...ghostBtn(C), color: C.danger, borderColor: C.dangerSoft }}>

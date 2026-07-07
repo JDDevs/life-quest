@@ -28,8 +28,12 @@ export function Metas(_props: { s: Stats }) {
   const openGoalForm = useStore((st) => st.openGoalForm)
   const importSuggested = useStore((st) => st.importSuggested)
   const reorderGoal = useStore((st) => st.reorderGoal)
+  const useGoalTemplate = useStore((st) => st.useGoalTemplate)
+  const deleteGoalTemplate = useStore((st) => st.deleteGoalTemplate)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const goals = curGoals()
+  const goalTemplates = d.goalTemplates || []
+  const [showTpl, setShowTpl] = useState(false)
 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapsed)
   const persist = (next: Record<string, boolean>) => {
@@ -67,6 +71,72 @@ export function Metas(_props: { s: Stats }) {
             <Icon name="history" size={18} color={C.muted} />
             Semanas
           </button>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setShowTpl((v) => !v)} style={{ ...ghostBtn(C), color: showTpl ? C.primaryD : C.text, borderColor: showTpl ? C.primary + '55' : C.line2 }}>
+              <Icon name="bookmarks" size={18} color={showTpl ? C.primary : C.muted} fill={showTpl} />
+              Plantillas
+            </button>
+            {showTpl ? (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  zIndex: 60,
+                  width: '300px',
+                  maxWidth: '80vw',
+                  background: C.card,
+                  border: '1px solid ' + C.line2,
+                  borderRadius: '12px',
+                  boxShadow: '0 12px 30px rgba(0,0,0,.18)',
+                  padding: '6px',
+                  maxHeight: '320px',
+                  overflowY: 'auto',
+                }}
+              >
+                <div style={{ fontSize: '10.5px', fontWeight: 800, color: C.faint, textTransform: 'uppercase', letterSpacing: '.5px', padding: '6px 8px 4px' }}>
+                  Plantillas de metas
+                </div>
+                {goalTemplates.length === 0 ? (
+                  <div style={{ fontSize: '12.5px', color: C.faint, fontWeight: 600, padding: '6px 8px 8px', lineHeight: 1.4 }}>
+                    Aún no tienes plantillas. Guarda una desde el editor de metas (botón "Guardar como plantilla").
+                  </div>
+                ) : (
+                  goalTemplates.map((tpl) => {
+                    const area = AREAS.find((x) => x.id === tpl.areaId)
+                    return (
+                      <div key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', borderRadius: '9px' }}>
+                        <button
+                          onClick={() => {
+                            useGoalTemplate(tpl.id)
+                            setShowTpl(false)
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '9px', flex: 1, minWidth: 0, textAlign: 'left' }}
+                        >
+                          <span style={{ width: '24px', height: '24px', borderRadius: '7px', background: (area?.color || C.primary) + '22', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                            <Icon name={area?.icon || 'flag'} size={14} color={area?.color || C.primary} fill />
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontWeight: 700, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tpl.name}</span>
+                            <span style={{ display: 'block', fontSize: '11px', color: C.faint, fontWeight: 600 }}>
+                              {area?.name} · +{tpl.xp} XP
+                            </span>
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => deleteGoalTemplate(tpl.id)}
+                          title="Eliminar plantilla"
+                          style={{ color: C.faint, display: 'grid', placeItems: 'center', width: '26px', height: '26px', flexShrink: 0 }}
+                        >
+                          <Icon name="delete" size={15} color={C.faint} />
+                        </button>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            ) : null}
+          </div>
           <button onClick={() => openGoalForm()} style={primaryBtn(C)}>
             <Icon name="add" size={19} color="#fff" />
             Nueva meta
