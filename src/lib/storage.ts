@@ -39,7 +39,7 @@ export function seed(): AppData {
     tasks: [],
     pomoSettings: { ...DEFAULT_POMO_SETTINGS },
     pomoSessions: [],
-    pomoRun: { running: false, mode: 'pomo', phase: 'work', cycle: 0, taskId: null, anchorTs: null, baseSec: DEFAULT_POMO_SETTINGS.workMin * 60 },
+    pomoRun: { running: false, mode: 'pomo', phase: 'work', cycle: 0, taskId: null, anchorTs: null, baseSec: DEFAULT_POMO_SETTINGS.workMin * 60, loggedSec: 0 },
   }
 }
 
@@ -74,7 +74,9 @@ export function migrate(input: Partial<AppData>): AppData {
     taskId: null,
     anchorTs: null,
     baseSec: (d.pomoSettings.workMin || 25) * 60,
+    loggedSec: 0,
   }
+  if (d.pomoRun.loggedSec === undefined) d.pomoRun.loggedSec = 0
   if (!d.currentWeek) {
     const wk = mondayKey(new Date())
     d.currentWeek = wk

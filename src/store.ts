@@ -1016,35 +1016,31 @@ export const useStore = create<StoreState>((set, get) => {
     setPomoTask: (id) => {
       const cur = get().data.pomoRun
       if (id === cur.taskId) return
-      // Bank the minutes already worked in the current block to the PREVIOUS
-      // task, then start a fresh block for the new one — so time is always
-      // attributed to the task you actually worked on. (Only during work.)
+      // Bank the minutes worked on the CURRENT task so far to the previous task,
+      // then keep the SAME timer running for the new task — never reset a pomo /
+      // stopwatch that's already in progress. `loggedSec` remembers how much of
+      // this block was already attributed, so completion credits only the rest.
+      let newLogged = cur.loggedSec || 0
       if (cur.phase === 'work') {
         const workedSec = cur.mode === 'pomo' ? get().data.pomoSettings.workMin * 60 - pomoRemainingOf(cur) : pomoElapsedOf(cur)
-        const minutes = Math.floor(workedSec / 60)
+        const segSec = workedSec - (cur.loggedSec || 0)
+        const minutes = Math.floor(segSec / 60)
         if (minutes >= 1) {
           const now = Date.now()
           get().logPomoSession({ minutes, mode: 'stopwatch', taskId: cur.taskId, start: now - minutes * 60000, end: now })
         }
+        // advance by whole minutes only — the leftover seconds carry to the next
+        // segment so no focus time is lost
+        newLogged = (cur.loggedSec || 0) + minutes * 60
       }
       patch((d) => {
-        const r = d.pomoRun
-        if (r.phase === 'work') {
-          d.pomoRun = {
-            ...r,
-            taskId: id,
-            anchorTs: r.running ? Date.now() : null,
-            baseSec: r.mode === 'pomo' ? d.pomoSettings.workMin * 60 : 0,
-          }
-        } else {
-          d.pomoRun = { ...r, taskId: id } // during a break: just relabel
-        }
+        d.pomoRun = { ...d.pomoRun, taskId: id, loggedSec: newLogged }
       })
     },
     setPomoMode: (m) =>
       patch((d) => {
         if (d.pomoRun.running) return
-        d.pomoRun = { ...d.pomoRun, mode: m, phase: 'work', cycle: 0, anchorTs: null, baseSec: m === 'pomo' ? d.pomoSettings.workMin * 60 : 0 }
+        d.pomoRun = { ...d.pomoRun, mode: m, phase: 'work', cycle: 0, anchorTs: null, baseSec: m === 'pomo' ? d.pomoSettings.workMin * 60 : 0, loggedSec: 0 }
       }),
     updatePomoSettings: (p) =>
       patch((d) => {
@@ -1093,20 +1089,20 @@ export const useStore = create<StoreState>((set, get) => {
     pomoReset: () =>
       patch((d) => {
         const cur = d.pomoRun
-        d.pomoRun = { ...cur, running: false, phase: 'work', cycle: 0, anchorTs: null, baseSec: cur.mode === 'pomo' ? d.pomoSettings.workMin * 60 : 0 }
+        d.pomoRun = { ...cur, running: false, phase: 'work', cycle: 0, anchorTs: null, baseSec: cur.mode === 'pomo' ? d.pomoSettings.workMin * 60 : 0, loggedSec: 0 }
       }),
     pomoStopLog: () => {
       const cur = get().data.pomoRun
       const s = get().data.pomoSettings
       const now = Date.now()
       if (cur.mode === 'pomo') {
-        const done = s.workMin * 60 - pomoRemainingOf(cur)
+        const done = s.workMin * 60 - pomoRemainingOf(cur) - (cur.loggedSec || 0)
         const minutes = Math.floor(done / 60)
         if (cur.phase === 'work' && minutes >= 1) {
           get().logPomoSession({ minutes, mode: 'pomo', taskId: cur.taskId, start: now - minutes * 60000, end: now })
         }
       } else {
-        const minutes = Math.floor(pomoElapsedOf(cur) / 60)
+        const minutes = Math.floor((pomoElapsedOf(cur) - (cur.loggedSec || 0)) / 60)
         if (minutes >= 1) get().logPomoSession({ minutes, mode: 'stopwatch', taskId: cur.taskId, start: now - minutes * 60000, end: now })
       }
       playSound('bell', get().data.muted)
@@ -1119,17 +1115,21 @@ export const useStore = create<StoreState>((set, get) => {
         const s = get().data.pomoSettings
         const now = Date.now()
         if (cur.phase === 'work') {
-          // work block finished → log it, then start a break
-          get().logPomoSession({ minutes: s.workMin, mode: 'pomo', taskId: cur.taskId, start: now - s.workMin * 60000, end: now })
+          // work block finished → log the un-attributed remainder to the current
+          // task (earlier segments were banked on switch), then start a break
+          const minutes = Math.max(0, Math.floor((s.workMin * 60 - (cur.loggedSec || 0)) / 60))
+          if (minutes >= 1) {
+            get().logPomoSession({ minutes, mode: 'pomo', taskId: cur.taskId, start: now - minutes * 60000, end: now })
+          }
           const nextCycle = cur.cycle + 1
           const brk = nextCycle % s.longEvery === 0 ? s.longBreakMin : s.breakMin
           patch((d) => {
-            d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'break', cycle: nextCycle, baseSec: brk * 60 }
+            d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'break', cycle: nextCycle, baseSec: brk * 60, loggedSec: 0 }
           })
           playSound('bell', get().data.muted)
         } else {
           patch((d) => {
-            d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'work', baseSec: s.workMin * 60 }
+            d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'work', baseSec: s.workMin * 60, loggedSec: 0 }
           })
           playSound('bell', get().data.muted)
         }

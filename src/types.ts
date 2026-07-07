@@ -89,6 +89,10 @@ export interface PomoRun {
   taskId: string | null
   anchorTs: number | null
   baseSec: number
+  /** Seconds of the current work block already logged to previous tasks
+   *  (via task switches). Lets us keep the timer running when you change task
+   *  while still attributing each segment to the right task. */
+  loggedSec: number
 }
 
 export interface Reward {
