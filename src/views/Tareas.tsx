@@ -1,4 +1,7 @@
-import { useState } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { TASK_PRIORITIES } from '../constants'
 import { addDays, dateKey } from '../lib/date'
 import { useStore, type TaskView } from '../store'
@@ -28,6 +31,8 @@ export function Tareas() {
   const setTaskView = useStore((s) => s.setTaskView)
   const openTaskForm = useStore((s) => s.openTaskForm)
   const quickAddTask = useStore((s) => s.quickAddTask)
+  const reorderTask = useStore((s) => s.reorderTask)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [quick, setQuick] = useState('')
   const [showDone, setShowDone] = useState(false)
 
@@ -157,11 +162,21 @@ export function Tareas() {
                   <span style={{ fontWeight: 800, fontSize: '13px', color: C.text }}>{pr.name}</span>
                   <span style={{ fontSize: '12px', color: C.faint, fontWeight: 700 }}>{list.length}</span>
                 </div>
-                <div style={{ display: 'grid', gap: '8px' }}>
-                  {list.map((t) => (
-                    <TaskRow key={t.id} t={t} />
-                  ))}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={({ active, over }) => {
+                    if (over && active.id !== over.id) reorderTask(String(active.id), String(over.id))
+                  }}
+                >
+                  <SortableContext items={list.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                    <div style={{ display: 'grid', gap: '8px' }}>
+                      {list.map((t) => (
+                        <SortableTaskRow key={t.id} t={t} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               </div>
             )
           })}
@@ -187,13 +202,42 @@ export function Tareas() {
   )
 }
 
-function TaskRow({ t }: { t: Task }) {
+function SortableTaskRow({ t }: { t: Task }) {
+  const C = useC()
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: t.id })
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    position: 'relative',
+    zIndex: isDragging ? 20 : undefined,
+  }
+  const handle = (
+    <button
+      {...attributes}
+      {...listeners}
+      title="Arrastrar para reordenar"
+      style={{ cursor: 'grab', color: C.faint, touchAction: 'none', display: 'grid', placeItems: 'center', width: '22px', height: '24px', flexShrink: 0, marginTop: '1px' }}
+    >
+      <Icon name="drag_indicator" size={17} color={C.faint} />
+    </button>
+  )
+  return (
+    <div ref={setNodeRef} style={style}>
+      <TaskRow t={t} handle={handle} />
+    </div>
+  )
+}
+
+function TaskRow({ t, handle }: { t: Task; handle?: ReactNode }) {
   const C = useC()
   const d = useStore((s) => s.data)
   const toggleTask = useStore((s) => s.toggleTask)
   const openTaskForm = useStore((s) => s.openTaskForm)
   const setView = useStore((s) => s.setView)
   const setPomoTask = useStore((s) => s.setPomoTask)
+  const toggleSubtask = useStore((s) => s.toggleSubtask)
+  const [openSubs, setOpenSubs] = useState(false)
   const list = d.lists.find((l) => l.id === t.listId)
   const pr = TASK_PRIORITIES.find((p) => p.id === t.priority)!
   const subDone = t.subtasks.filter((x) => x.done).length
@@ -203,9 +247,6 @@ function TaskRow({ t }: { t: Task }) {
   return (
     <div
       style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '12px',
         background: C.card,
         border: '1px solid ' + C.line,
         borderLeft: '3px solid ' + pr.color,
@@ -213,76 +254,114 @@ function TaskRow({ t }: { t: Task }) {
         padding: '12px 14px',
       }}
     >
-      <button
-        onClick={() => toggleTask(t.id)}
-        title="Completar"
-        style={{
-          width: '22px',
-          height: '22px',
-          borderRadius: '7px',
-          border: '2px solid ' + (t.done ? C.green : pr.color),
-          background: t.done ? C.green : 'transparent',
-          display: 'grid',
-          placeItems: 'center',
-          flexShrink: 0,
-          marginTop: '1px',
-        }}
-      >
-        {t.done ? <Icon name="check" size={15} color="#fff" fill /> : null}
-      </button>
-      <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => openTaskForm(t)}>
-        <div style={{ fontWeight: 700, fontSize: '14px', color: t.done ? C.faint : C.text, textDecoration: t.done ? 'line-through' : 'none' }}>{t.title}</div>
-        {t.notes ? (
-          <div style={{ fontSize: '12.5px', color: C.muted, fontWeight: 500, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes}</div>
-        ) : null}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap', marginTop: t.tags.length || t.estPomos || t.due || t.subtasks.length ? '7px' : 0 }}>
-          {list ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: list.color }}>
-              <Icon name={list.icon} size={13} color={list.color} fill />
-              {list.name}
-            </span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+        {handle}
+        <button
+          onClick={() => toggleTask(t.id)}
+          title="Completar"
+          style={{
+            width: '22px',
+            height: '22px',
+            borderRadius: '7px',
+            border: '2px solid ' + (t.done ? C.green : pr.color),
+            background: t.done ? C.green : 'transparent',
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0,
+            marginTop: '1px',
+          }}
+        >
+          {t.done ? <Icon name="check" size={15} color="#fff" fill /> : null}
+        </button>
+        <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => openTaskForm(t)}>
+          <div style={{ fontWeight: 700, fontSize: '14px', color: t.done ? C.faint : C.text, textDecoration: t.done ? 'line-through' : 'none' }}>{t.title}</div>
+          {t.notes ? (
+            <div style={{ fontSize: '12.5px', color: C.muted, fontWeight: 500, marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.notes}</div>
           ) : null}
-          {t.tags.map((tag) => (
-            <span key={tag} style={{ fontSize: '11px', fontWeight: 700, color: C.primaryD, background: C.primarySoft, padding: '2px 8px', borderRadius: '6px' }}>
-              {tag}
-            </span>
-          ))}
-          {t.linkedGoal ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: 700, color: C.green }} title={'Aporta a: ' + t.linkedGoal}>
-              <Icon name="flag" size={12} color={C.green} fill />
-              <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.linkedGoal}</span>
-            </span>
-          ) : null}
-          {t.estPomos > 0 ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: C.muted, fontWeight: 600 }}>
-              <Icon name="timer" size={13} color={C.muted} />
-              {t.spentPomos}/{t.estPomos}
-            </span>
-          ) : null}
-          {t.subtasks.length ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: C.muted, fontWeight: 600 }}>
-              <Icon name="checklist" size={13} color={C.muted} />
-              {subDone}/{t.subtasks.length}
-            </span>
-          ) : null}
-          {t.due ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: overdue ? C.danger : C.muted, fontWeight: 700 }}>
-              <Icon name="event" size={13} color={overdue ? C.danger : C.muted} />
-              {t.due}
-            </span>
-          ) : null}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', flexWrap: 'wrap', marginTop: t.tags.length || t.estPomos || t.due || t.subtasks.length ? '7px' : 0 }}>
+            {list ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: list.color }}>
+                <Icon name={list.icon} size={13} color={list.color} fill />
+                {list.name}
+              </span>
+            ) : null}
+            {t.tags.map((tag) => (
+              <span key={tag} style={{ fontSize: '11px', fontWeight: 700, color: C.primaryD, background: C.primarySoft, padding: '2px 8px', borderRadius: '6px' }}>
+                {tag}
+              </span>
+            ))}
+            {t.linkedGoal ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: 700, color: C.green }} title={'Aporta a: ' + t.linkedGoal}>
+                <Icon name="flag" size={12} color={C.green} fill />
+                <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.linkedGoal}</span>
+              </span>
+            ) : null}
+            {t.estPomos > 0 ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: C.muted, fontWeight: 600 }}>
+                <Icon name="timer" size={13} color={C.muted} />
+                {t.spentPomos}/{t.estPomos}
+              </span>
+            ) : null}
+            {t.subtasks.length ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpenSubs((v) => !v)
+                }}
+                title="Ver subtareas"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: subDone === t.subtasks.length ? C.green : C.muted, fontWeight: 700 }}
+              >
+                <Icon name={openSubs ? 'expand_more' : 'checklist'} size={14} color={subDone === t.subtasks.length ? C.green : C.muted} />
+                {subDone}/{t.subtasks.length}
+              </button>
+            ) : null}
+            {t.due ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: overdue ? C.danger : C.muted, fontWeight: 700 }}>
+                <Icon name="event" size={13} color={overdue ? C.danger : C.muted} />
+                {t.due}
+              </span>
+            ) : null}
+          </div>
         </div>
+        <button
+          onClick={() => {
+            setPomoTask(t.id)
+            setView('pomodoro')
+          }}
+          title="Enfocar (Pomodoro)"
+          style={{ width: '30px', height: '30px', borderRadius: '8px', display: 'grid', placeItems: 'center', color: C.primary, flexShrink: 0 }}
+        >
+          <Icon name="play_circle" size={20} color={C.primary} />
+        </button>
       </div>
-      <button
-        onClick={() => {
-          setPomoTask(t.id)
-          setView('pomodoro')
-        }}
-        title="Enfocar (Pomodoro)"
-        style={{ width: '30px', height: '30px', borderRadius: '8px', display: 'grid', placeItems: 'center', color: C.primary, flexShrink: 0 }}
-      >
-        <Icon name="play_circle" size={20} color={C.primary} />
-      </button>
+
+      {openSubs && t.subtasks.length ? (
+        <div style={{ display: 'grid', gap: '4px', marginTop: '10px', marginLeft: '34px' }}>
+          {t.subtasks.map((st) => (
+            <button
+              key={st.id}
+              onClick={() => toggleSubtask(t.id, st.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '5px 6px', borderRadius: '8px', textAlign: 'left', width: '100%' }}
+            >
+              <span
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '6px',
+                  border: '2px solid ' + (st.done ? C.green : C.line2),
+                  background: st.done ? C.green : 'transparent',
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {st.done ? <Icon name="check" size={12} color="#fff" fill /> : null}
+              </span>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: st.done ? C.faint : C.text, textDecoration: st.done ? 'line-through' : 'none' }}>{st.title}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -193,6 +193,7 @@ interface StoreState {
   saveGoal: (f: GoalForm) => void
   deleteGoal: (id: string) => void
   importSuggested: () => void
+  reorderGoal: (activeId: string, overId: string) => void
 
   // rewards / potions
   claimReward: (r: Reward) => void
@@ -250,6 +251,7 @@ interface StoreState {
   toggleTask: (id: string) => void
   quickAddTask: (title: string) => void
   toggleSubtask: (taskId: string, subId: string) => void
+  reorderTask: (activeId: string, overId: string) => void
   addList: (name: string, icon: string, color: string) => void
   deleteList: (id: string) => void
 
@@ -513,6 +515,16 @@ export const useStore = create<StoreState>((set, get) => {
           } else g.done = false
           arr.push(g)
         })
+      }),
+    reorderGoal: (activeId, overId) =>
+      patch((d) => {
+        const arr = d.goals[d.currentWeek]
+        if (!arr) return
+        const from = arr.findIndex((g) => g.id === activeId)
+        const to = arr.findIndex((g) => g.id === overId)
+        if (from < 0 || to < 0 || from === to) return
+        const [moved] = arr.splice(from, 1)
+        arr.splice(to, 0, moved)
       }),
 
     claimReward: (r) => {
@@ -975,6 +987,14 @@ export const useStore = create<StoreState>((set, get) => {
         const st = t.subtasks.find((x) => x.id === subId)
         if (st) st.done = !st.done
       }),
+    reorderTask: (activeId, overId) =>
+      patch((d) => {
+        const from = d.tasks.findIndex((t) => t.id === activeId)
+        const to = d.tasks.findIndex((t) => t.id === overId)
+        if (from < 0 || to < 0 || from === to) return
+        const [moved] = d.tasks.splice(from, 1)
+        d.tasks.splice(to, 0, moved)
+      }),
     addList: (name, icon, color) => {
       if (!name.trim()) return
       apply((data) => {
@@ -993,10 +1013,34 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     // ---------- pomodoro ----------
-    setPomoTask: (id) =>
+    setPomoTask: (id) => {
+      const cur = get().data.pomoRun
+      if (id === cur.taskId) return
+      // Bank the minutes already worked in the current block to the PREVIOUS
+      // task, then start a fresh block for the new one — so time is always
+      // attributed to the task you actually worked on. (Only during work.)
+      if (cur.phase === 'work') {
+        const workedSec = cur.mode === 'pomo' ? get().data.pomoSettings.workMin * 60 - pomoRemainingOf(cur) : pomoElapsedOf(cur)
+        const minutes = Math.floor(workedSec / 60)
+        if (minutes >= 1) {
+          const now = Date.now()
+          get().logPomoSession({ minutes, mode: 'stopwatch', taskId: cur.taskId, start: now - minutes * 60000, end: now })
+        }
+      }
       patch((d) => {
-        d.pomoRun = { ...d.pomoRun, taskId: id }
-      }),
+        const r = d.pomoRun
+        if (r.phase === 'work') {
+          d.pomoRun = {
+            ...r,
+            taskId: id,
+            anchorTs: r.running ? Date.now() : null,
+            baseSec: r.mode === 'pomo' ? d.pomoSettings.workMin * 60 : 0,
+          }
+        } else {
+          d.pomoRun = { ...r, taskId: id } // during a break: just relabel
+        }
+      })
+    },
     setPomoMode: (m) =>
       patch((d) => {
         if (d.pomoRun.running) return
@@ -1031,7 +1075,6 @@ export const useStore = create<StoreState>((set, get) => {
           if (mode === 'pomo') task.spentPomos += 1
         }
       })
-      playSound('heal', get().data.muted)
     },
 
     // ---------- pomodoro timer (lives in `data`, so it syncs across devices) ----------
@@ -1066,6 +1109,7 @@ export const useStore = create<StoreState>((set, get) => {
         const minutes = Math.floor(pomoElapsedOf(cur) / 60)
         if (minutes >= 1) get().logPomoSession({ minutes, mode: 'stopwatch', taskId: cur.taskId, start: now - minutes * 60000, end: now })
       }
+      playSound('bell', get().data.muted)
       get().pomoReset()
     },
     pomoTick: () => {
@@ -1082,10 +1126,12 @@ export const useStore = create<StoreState>((set, get) => {
           patch((d) => {
             d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'break', cycle: nextCycle, baseSec: brk * 60 }
           })
+          playSound('bell', get().data.muted)
         } else {
           patch((d) => {
             d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'work', baseSec: s.workMin * 60 }
           })
+          playSound('bell', get().data.muted)
         }
         return
       }

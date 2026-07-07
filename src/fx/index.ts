@@ -1,8 +1,36 @@
 import { palette } from '../theme'
 
-type SoundKind = 'level' | 'coin' | 'hurt' | 'heal' | 'tick'
+type SoundKind = 'level' | 'coin' | 'hurt' | 'heal' | 'tick' | 'bell'
 
 let ac: AudioContext | null = null
+
+// A warm, resonant bell: inharmonic partials (like a real chime) with a soft
+// attack and long exponential decay, struck twice for a fuller ring.
+function playBell(context: AudioContext, start: number): void {
+  const strike = (t0: number, level: number) => {
+    const partials: [number, number][] = [
+      [784, 1],
+      [1568, 0.55],
+      [2163, 0.4], // inharmonic overtone gives the "metallic" bell character
+      [4233, 0.2],
+    ]
+    partials.forEach(([f, g]) => {
+      const o = context.createOscillator()
+      const gain = context.createGain()
+      o.type = 'sine'
+      o.frequency.value = f
+      gain.gain.setValueAtTime(0.0001, t0)
+      gain.gain.exponentialRampToValueAtTime(0.16 * level * g, t0 + 0.006)
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.7)
+      o.connect(gain)
+      gain.connect(context.destination)
+      o.start(t0)
+      o.stop(t0 + 1.8)
+    })
+  }
+  strike(start, 1)
+  strike(start + 0.17, 0.55)
+}
 
 export function playSound(kind: SoundKind, muted: boolean): void {
   if (muted) return
@@ -11,6 +39,10 @@ export function playSound(kind: SoundKind, muted: boolean): void {
     if (!AC) return
     ac = ac || new AC()
     const now = ac.currentTime
+    if (kind === 'bell') {
+      playBell(ac, now)
+      return
+    }
     const notes =
       kind === 'level'
         ? [523, 659, 784, 1047]

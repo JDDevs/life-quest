@@ -1,3 +1,7 @@
+import { useState, type CSSProperties, type ReactNode } from 'react'
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { AREAS, type Area } from '../constants'
 import { weekLabel } from '../lib/date'
 import { goalUnits } from '../lib/goals'
@@ -6,6 +10,16 @@ import type { Goal, Stats } from '../types'
 import { WeekReminder } from '../components/WeekReminder'
 import { Card, Icon, SectionTitle, ghostBtn, primaryBtn, stepBtn, useC } from '../ui'
 
+const COLLAPSE_KEY = 'metas_collapsed'
+
+function loadCollapsed(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
 export function Metas(_props: { s: Stats }) {
   const C = useC()
   const d = useStore((st) => st.data)
@@ -13,7 +27,27 @@ export function Metas(_props: { s: Stats }) {
   const setView = useStore((st) => st.setView)
   const openGoalForm = useStore((st) => st.openGoalForm)
   const importSuggested = useStore((st) => st.importSuggested)
+  const reorderGoal = useStore((st) => st.reorderGoal)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const goals = curGoals()
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(loadCollapsed)
+  const persist = (next: Record<string, boolean>) => {
+    setCollapsed(next)
+    try {
+      localStorage.setItem(COLLAPSE_KEY, JSON.stringify(next))
+    } catch {
+      /* ignore */
+    }
+  }
+  const toggleArea = (id: string) => persist({ ...collapsed, [id]: !collapsed[id] })
+  const areasWithGoals = AREAS.filter((a) => goals.some((g) => g.areaId === a.id))
+  const allCollapsed = areasWithGoals.length > 0 && areasWithGoals.every((a) => collapsed[a.id])
+  const toggleAll = () => {
+    const next = { ...collapsed }
+    areasWithGoals.forEach((a) => (next[a.id] = !allCollapsed))
+    persist(next)
+  }
 
   return (
     <div>
@@ -23,6 +57,12 @@ export function Metas(_props: { s: Stats }) {
           <SectionTitle title="Metas de la semana" sub={weekLabel(d.currentWeek)} />
         </div>
         <div style={{ display: 'flex', gap: '9px', flexWrap: 'wrap' }}>
+          {areasWithGoals.length > 1 ? (
+            <button onClick={toggleAll} style={ghostBtn(C)} title={allCollapsed ? 'Expandir todas' : 'Colapsar todas'}>
+              <Icon name={allCollapsed ? 'unfold_more' : 'unfold_less'} size={18} color={C.muted} />
+              {allCollapsed ? 'Expandir' : 'Colapsar'}
+            </button>
+          ) : null}
           <button onClick={() => setView('historial')} style={ghostBtn(C)}>
             <Icon name="history" size={18} color={C.muted} />
             Semanas
@@ -37,26 +77,65 @@ export function Metas(_props: { s: Stats }) {
       {goals.length === 0 ? (
         <EmptyMetas onCreate={() => openGoalForm()} onImport={importSuggested} />
       ) : (
-        <div style={{ display: 'grid', gap: '18px' }}>
+        <div style={{ display: 'grid', gap: '12px' }}>
           {AREAS.map((a) => {
             const list = goals.filter((g) => g.areaId === a.id)
             if (!list.length) return null
+            const agg = list.reduce(
+              (acc, g) => {
+                const u = goalUnits(g)
+                acc.done += Math.min(u.done, u.total)
+                acc.total += u.total
+                if (u.complete) acc.doneGoals += 1
+                return acc
+              },
+              { done: 0, total: 0, doneGoals: 0 },
+            )
+            const pct = agg.total > 0 ? Math.round((agg.done / agg.total) * 100) : 0
+            const isCollapsed = !!collapsed[a.id]
+            const complete = pct >= 100
             return (
-              <div key={a.id}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '9px', margin: '2px 0 11px' }}>
-                  <div style={{ width: '26px', height: '26px', borderRadius: '8px', background: a.color + '1F', display: 'grid', placeItems: 'center' }}>
-                    <Icon name={a.icon} size={16} color={a.color} fill />
+              <div key={a.id} style={{ border: '1px solid ' + C.line, borderRadius: '14px', background: C.card, overflow: 'hidden' }}>
+                <button
+                  onClick={() => toggleArea(a.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '11px', width: '100%', padding: '12px 14px', textAlign: 'left', background: 'transparent' }}
+                >
+                  <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: a.color + '1F', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                    <Icon name={a.icon} size={17} color={a.color} fill />
                   </div>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontFamily: '"Space Grotesk"', fontWeight: 700 }}>{a.name}</h3>
-                  <span style={{ fontSize: '12px', color: C.faint, fontWeight: 600 }}>
-                    {list.length + (list.length === 1 ? ' meta' : ' metas')}
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gap: '10px' }}>
-                  {list.map((g) => (
-                    <GoalRow key={g.id} g={g} a={a} />
-                  ))}
-                </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h3 style={{ margin: 0, fontSize: '15px', fontFamily: '"Space Grotesk"', fontWeight: 700 }}>{a.name}</h3>
+                      <span style={{ fontSize: '11.5px', color: C.faint, fontWeight: 700 }}>
+                        {agg.doneGoals}/{list.length}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                      <span style={{ flex: 1, height: '7px', borderRadius: '5px', background: C.line, overflow: 'hidden' }}>
+                        <span style={{ display: 'block', width: pct + '%', height: '100%', background: complete ? C.green : a.color, borderRadius: '5px', transition: 'width .35s' }} />
+                      </span>
+                      <span style={{ fontSize: '12px', fontWeight: 800, color: complete ? C.green : a.color, fontFamily: '"Space Grotesk"', minWidth: '38px', textAlign: 'right' }}>{pct}%</span>
+                    </div>
+                  </div>
+                  <Icon name={isCollapsed ? 'expand_more' : 'expand_less'} size={22} color={C.faint} />
+                </button>
+                {!isCollapsed ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={({ active, over }) => {
+                      if (over && active.id !== over.id) reorderGoal(String(active.id), String(over.id))
+                    }}
+                  >
+                    <SortableContext items={list.map((g) => g.id)} strategy={verticalListSortingStrategy}>
+                      <div style={{ display: 'grid', gap: '10px', padding: '0 12px 12px' }}>
+                        {list.map((g) => (
+                          <SortableGoalRow key={g.id} g={g} a={a} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                ) : null}
               </div>
             )
           })}
@@ -120,7 +199,34 @@ function EmptyMetas({ onCreate, onImport }: { onCreate: () => void; onImport: ()
   )
 }
 
-function GoalRow({ g, a }: { g: Goal; a: Area }) {
+function SortableGoalRow({ g, a }: { g: Goal; a: Area }) {
+  const C = useC()
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: g.id })
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    position: 'relative',
+    zIndex: isDragging ? 20 : undefined,
+  }
+  const handle = (
+    <button
+      {...attributes}
+      {...listeners}
+      title="Arrastrar para reordenar"
+      style={{ cursor: 'grab', color: C.faint, touchAction: 'none', display: 'grid', placeItems: 'center', width: '24px', height: '30px', flexShrink: 0 }}
+    >
+      <Icon name="drag_indicator" size={18} color={C.faint} />
+    </button>
+  )
+  return (
+    <div ref={setNodeRef} style={style}>
+      <GoalRow g={g} a={a} handle={handle} />
+    </div>
+  )
+}
+
+function GoalRow({ g, a, handle }: { g: Goal; a: Area; handle?: ReactNode }) {
   const C = useC()
   const openGoalForm = useStore((st) => st.openGoalForm)
   const setView = useStore((st) => st.setView)
@@ -142,7 +248,8 @@ function GoalRow({ g, a }: { g: Goal; a: Area }) {
         boxShadow: done ? '0 4px 14px ' + a.color + '18' : 'none',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+        {handle}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '3px' }}>
             <span style={{ fontWeight: 700, fontSize: '14.5px', color: done ? C.muted : C.text, textDecoration: done ? 'line-through' : 'none' }}>

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { useStore } from './store'
 import { palette } from './theme'
 import type { Palette } from './types'
@@ -212,9 +212,17 @@ export function stepBtn(C: Palette, dis?: boolean, bg?: string): CSSProperties {
 
 export function Overlay({ children, onClose }: { children: ReactNode; onClose: () => void }) {
   const C = useC()
+  // Clicking the backdrop no longer closes the modal (avoids losing work by a
+  // stray click). Escape still closes it so you're never trapped.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
   return (
     <div
-      onClick={onClose}
       style={{
         position: 'fixed',
         inset: 0,
@@ -228,7 +236,6 @@ export function Overlay({ children, onClose }: { children: ReactNode; onClose: (
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           background: C.card,
           borderRadius: '22px',
