@@ -55,6 +55,8 @@ export interface Task {
   subtasks: Subtask[]
   /** Optional link to a weekly goal (by its title) to track contribution. */
   linkedGoal?: string
+  /** Uploaded image URLs (Cloudflare R2), shown as a thumbnail gallery. */
+  images?: string[]
 }
 
 export interface TaskList {

@@ -55,6 +55,7 @@ export function Tareas() {
     due: t.due,
     subtasks: t.subtasks.map((s) => ({ ...s })),
     linkedGoal: t.linkedGoal || '',
+    images: [...(t.images || [])],
   })
   const openMenu = (e: MouseEvent, task: Task) => {
     e.preventDefault()
@@ -440,6 +441,12 @@ function TaskRow({ t, handle, onMenu }: { t: Task; handle?: ReactNode; onMenu?: 
                 <Icon name={openSubs ? 'expand_more' : 'checklist'} size={14} color={subDone === t.subtasks.length ? C.green : C.muted} />
                 {subDone}/{t.subtasks.length}
               </button>
+            ) : null}
+            {t.images && t.images.length ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: C.muted, fontWeight: 600 }}>
+                <Icon name="image" size={13} color={C.muted} />
+                {t.images.length}
+              </span>
             ) : null}
             {t.due ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', color: overdue ? C.danger : C.muted, fontWeight: 700 }}>

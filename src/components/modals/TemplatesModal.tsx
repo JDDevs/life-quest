@@ -30,6 +30,7 @@ export function TemplatesModal() {
       due: null,
       subtasks: tpl.subtasks.map((s) => ({ id: 'st' + Math.random().toString(36).slice(2, 7), title: s.title, done: false })),
       linkedGoal: tpl.linkedGoal || '',
+      images: [],
     })
     setTemplatesModal(false)
   }

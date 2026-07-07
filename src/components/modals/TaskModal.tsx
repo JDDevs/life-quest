@@ -57,7 +57,13 @@ export function TaskModal() {
         </Field>
         <Field label="Descripción">
           <Suspense fallback={<textarea rows={4} value={f.notes} onChange={(e) => set('notes', e.target.value)} style={inp(C)} />}>
-            <MarkdownEditor value={f.notes} onChange={(v) => set('notes', v)} placeholder="Detalles, contexto… Markdown + pega imágenes con Ctrl+V." />
+            <MarkdownEditor
+              value={f.notes}
+              onChange={(v) => set('notes', v)}
+              images={f.images}
+              onImagesChange={(imgs) => set('images', imgs)}
+              placeholder="Detalles, contexto… Markdown + pega imágenes con Ctrl+V."
+            />
           </Suspense>
         </Field>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

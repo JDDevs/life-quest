@@ -8,10 +8,16 @@ export default function MarkdownEditor({
   value,
   onChange,
   placeholder,
+  images,
+  onImagesChange,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
+  /** When provided, uploaded images are shown as a thumbnail gallery instead of
+   *  being inserted as Markdown text. */
+  images?: string[]
+  onImagesChange?: (images: string[]) => void
 }) {
   const C = useC()
   const ta = useRef<HTMLTextAreaElement>(null)
@@ -62,8 +68,12 @@ export default function MarkdownEditor({
     setUploading(true)
     try {
       const url = await uploadImage(file)
-      insert(`\n![imagen](${url})\n`)
-      setTab('write')
+      if (onImagesChange) {
+        onImagesChange([...(images || []), url])
+      } else {
+        insert(`\n![imagen](${url})\n`)
+        setTab('write')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo subir la imagen.')
     } finally {
@@ -171,6 +181,31 @@ export default function MarkdownEditor({
           )}
         </div>
       )}
+
+      {images && images.length ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px 12px', borderTop: '1px solid ' + C.line }}>
+          {images.map((url, i) => (
+            <div key={i} style={{ position: 'relative', width: '74px', height: '74px' }}>
+              <img
+                src={url}
+                alt="adjunto"
+                onClick={() => window.open(url, '_blank', 'noopener')}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '9px', border: '1px solid ' + C.line2, cursor: 'zoom-in' }}
+              />
+              {onImagesChange ? (
+                <button
+                  type="button"
+                  title="Quitar imagen"
+                  onClick={() => onImagesChange(images.filter((_, j) => j !== i))}
+                  style={{ position: 'absolute', top: '-7px', right: '-7px', width: '20px', height: '20px', borderRadius: '50%', background: C.danger, display: 'grid', placeItems: 'center', boxShadow: '0 2px 6px rgba(0,0,0,.3)' }}
+                >
+                  <Icon name="close" size={13} color="#fff" />
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {(uploading || error) && (
         <div style={{ padding: '7px 12px', borderTop: '1px solid ' + C.line, fontSize: '12px', fontWeight: 600, color: error ? C.danger : C.muted, display: 'flex', alignItems: 'center', gap: '7px' }}>
