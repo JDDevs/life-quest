@@ -936,7 +936,7 @@ export const useStore = create<StoreState>((set, get) => {
               linkedGoal: t.linkedGoal || '',
               images: t.images ? [...t.images] : [],
             }
-          : { title: '', notes: '', listId: defaultList, tags: [], priority: 'anytime', estPomos: 0, due: null, subtasks: [], linkedGoal: '', images: [] },
+          : { title: '', notes: '', listId: defaultList, tags: [], priority: 'anytime', estPomos: 0, due: tv === 'today' ? dateKey(new Date()) : null, subtasks: [], linkedGoal: '', images: [] },
       })
     },
     setTaskForm: (f) => set({ taskForm: f }),
@@ -959,7 +959,7 @@ export const useStore = create<StoreState>((set, get) => {
           createdAt: dateKey(new Date()),
           subtasks: f.subtasks.filter((s) => s.title.trim()),
           linkedGoal: (f.linkedGoal || '').trim() || undefined,
-          images: f.images.filter(Boolean),
+          images: (f.images || []).filter(Boolean),
         }
         if (f.id) {
           const i = data.tasks.findIndex((x) => x.id === f.id)
