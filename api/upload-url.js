@@ -35,8 +35,17 @@ export default async function handler(req, res) {
     const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
     const bucket = process.env.R2_BUCKET
     const publicBase = (process.env.R2_PUBLIC_URL || '').replace(/\/+$/, '')
-    if (!accountId || !accessKeyId || !secretAccessKey || !bucket || !publicBase) {
-      res.status(500).json({ error: 'Cloudflare R2 no está configurado en el servidor.' })
+    const missing = [
+      ['R2_ACCOUNT_ID', accountId],
+      ['R2_ACCESS_KEY_ID', accessKeyId],
+      ['R2_SECRET_ACCESS_KEY', secretAccessKey],
+      ['R2_BUCKET', bucket],
+      ['R2_PUBLIC_URL', publicBase],
+    ]
+      .filter(([, v]) => !v)
+      .map(([k]) => k)
+    if (missing.length) {
+      res.status(500).json({ error: 'Faltan variables de R2 en el servidor (o falta redeploy): ' + missing.join(', ') })
       return
     }
 
