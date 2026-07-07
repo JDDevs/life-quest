@@ -24,6 +24,9 @@ export interface Goal {
   /** Per-day counts for `dailyCount` goals (length 7, Mon–Sun). */
   counts?: number[]
   done?: boolean
+  /** Timestamps (ms) of each progress increase — a day checked, a `+`, a rep,
+   *  or a weekly goal completed. Popped when the action is undone. */
+  log?: number[]
 }
 
 // ---------- Tareas / Pomodoro (TickTick-style) ----------

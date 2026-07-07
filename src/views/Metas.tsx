@@ -20,6 +20,18 @@ function loadCollapsed(): Record<string, boolean> {
   }
 }
 
+const LOG_MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+function fmtLog(ts: number): string {
+  const d = new Date(ts)
+  const now = new Date()
+  const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const stamp = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const diffDays = Math.round((day0 - stamp) / 86400000)
+  const time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+  const label = diffDays === 0 ? 'Hoy' : diffDays === 1 ? 'Ayer' : d.getDate() + ' ' + LOG_MONTHS[d.getMonth()]
+  return label + ' · ' + time
+}
+
 export function Metas(_props: { s: Stats }) {
   const C = useC()
   const d = useStore((st) => st.data)
@@ -424,6 +436,7 @@ function GoalRow({ g, a, handle, onMenu }: { g: Goal; a: Area; handle?: ReactNod
       <div style={{ marginTop: '12px' }}>
         <GoalControl g={g} a={a} />
       </div>
+      <GoalLog log={g.log} a={a} />
       {linked.length ? (
         <button
           onClick={() => setView('tareas')}
@@ -450,6 +463,36 @@ function GoalRow({ g, a, handle, onMenu }: { g: Goal; a: Area; handle?: ReactNod
           </span>
           <span style={{ fontSize: '12px', fontWeight: 700, color: linkPct === 100 ? C.green : C.faint }}>{linkPct}%</span>
         </button>
+      ) : null}
+    </div>
+  )
+}
+
+function GoalLog({ log, a }: { log?: number[]; a: Area }) {
+  const C = useC()
+  const [open, setOpen] = useState(false)
+  if (!log || log.length === 0) return null
+  const items = [...log].reverse()
+  return (
+    <div style={{ marginTop: '11px' }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, color: open ? a.color : C.muted }}
+      >
+        <Icon name="history" size={15} color={open ? a.color : C.muted} />
+        Registro · {log.length}
+        <Icon name={open ? 'expand_less' : 'expand_more'} size={16} color={open ? a.color : C.faint} />
+      </button>
+      {open ? (
+        <div style={{ marginTop: '8px', display: 'grid', gap: '5px', maxHeight: '170px', overflowY: 'auto', paddingLeft: '2px' }}>
+          {items.map((ts, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', fontWeight: 600, color: C.muted }}>
+              <span style={{ width: '22px', textAlign: 'right', color: C.faint, fontSize: '11px' }}>{items.length - i}.</span>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+              {fmtLog(ts)}
+            </div>
+          ))}
+        </div>
       ) : null}
     </div>
   )

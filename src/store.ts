@@ -383,9 +383,13 @@ export const useStore = create<StoreState>((set, get) => {
         g.checks[i] = !was
         if (g.checks[i]) {
           const coin = g.coins ?? g.xp
+          g.log = g.log || []
+          g.log.push(Date.now())
           markToday(data)
           playSound('tick', data.muted)
           return () => celebrate(data.theme, '+' + g.xp + ' XP · +' + coin + ' 🪙', areaColor(g.areaId))
+        } else if (g.log && g.log.length) {
+          g.log.pop()
         }
       }),
     incCount: (goalId, delta) =>
@@ -400,10 +404,14 @@ export const useStore = create<StoreState>((set, get) => {
           const beyond = prev >= target
           const gained = beyond ? g.extraXp || 0 : g.xp
           const coin = beyond ? g.extraCoins ?? g.extraXp ?? 0 : g.coins ?? g.xp
+          g.log = g.log || []
+          g.log.push(Date.now())
           markToday(data)
           playSound('tick', data.muted)
           return () =>
             celebrate(data.theme, '+' + gained + ' XP · +' + coin + ' 🪙' + (beyond ? ' extra' : ''), areaColor(g.areaId))
+        } else if (g.count < prev && g.log && g.log.length) {
+          g.log.pop()
         }
       }),
     incDayCount: (goalId, dayIdx, delta) =>
@@ -418,10 +426,14 @@ export const useStore = create<StoreState>((set, get) => {
           const beyond = prev >= dt
           const gained = beyond ? g.extraXp || 0 : g.xp
           const coin = beyond ? g.extraCoins ?? g.extraXp ?? 0 : g.coins ?? g.xp
+          g.log = g.log || []
+          g.log.push(Date.now())
           markToday(data)
           playSound('tick', data.muted)
           return () =>
             celebrate(data.theme, '+' + gained + ' XP · +' + coin + ' 🪙' + (beyond ? ' extra' : ''), areaColor(g.areaId))
+        } else if (g.counts[dayIdx] < prev && g.log && g.log.length) {
+          g.log.pop()
         }
       }),
     toggleWeekly: (goalId) =>
@@ -431,9 +443,13 @@ export const useStore = create<StoreState>((set, get) => {
         g.done = !g.done
         if (g.done) {
           const coin = g.coins ?? g.xp
+          g.log = g.log || []
+          g.log.push(Date.now())
           markToday(data)
           playSound('tick', data.muted)
           return () => celebrate(data.theme, '+' + g.xp + ' XP · +' + coin + ' 🪙', areaColor(g.areaId))
+        } else if (g.log && g.log.length) {
+          g.log.pop()
         }
       }),
 
@@ -491,6 +507,7 @@ export const useStore = create<StoreState>((set, get) => {
           g.count = old.count
           g.counts = old.counts
           g.done = old.done
+          g.log = old.log
           arr[i] = g
         } else arr.push(g)
         // ensure the progress field for this type exists
@@ -771,7 +788,7 @@ export const useStore = create<StoreState>((set, get) => {
         data.weekStart[next] = next
         if (copy) {
           data.goals[next] = (data.goals[data.currentWeek] || []).map((g) => {
-            const n: Goal = { ...g, id: 'g' + Date.now() + Math.random().toString(36).slice(2, 6) }
+            const n: Goal = { ...g, id: 'g' + Date.now() + Math.random().toString(36).slice(2, 6), log: [] }
             if (n.type === 'daily') n.checks = Array(7).fill(false)
             if (n.type === 'count') n.count = 0
             if (n.type === 'dailyCount') n.counts = Array(7).fill(0)
