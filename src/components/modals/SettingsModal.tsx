@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useStore } from '../../store'
 import { cloudEnabled, pullState, pushState } from '../../lib/cloud'
 import { Icon, Overlay, ghostBtn, primaryBtn, useC } from '../../ui'
+import { ensurePomoNotifyPermission, notifySupported } from '../../lib/notify'
 
 const SYNC_LABEL: Record<string, string> = {
   disabled: 'No configurada',
@@ -18,6 +19,7 @@ export function SettingsModal() {
   const setSettings = useStore((s) => s.setSettings)
   const toggleTheme = useStore((s) => s.toggleTheme)
   const toggleMuted = useStore((s) => s.toggleMuted)
+  const updatePomoSettings = useStore((s) => s.updatePomoSettings)
   const exportData = useStore((s) => s.exportData)
   const importData = useStore((s) => s.importData)
   const resetAll = useStore((s) => s.resetAll)
@@ -163,6 +165,32 @@ export function SettingsModal() {
           {d.muted ? 'Sonido desactivado — toca para activar' : 'Sonido activado — toca para silenciar'}
         </button>,
       )}
+      {notifySupported()
+        ? sec(
+            'Notificaciones',
+            <div>
+              <button
+                onClick={async () => {
+                  if (d.pomoSettings.notifyOnDone) {
+                    updatePomoSettings({ notifyOnDone: false })
+                    return
+                  }
+                  const ok = await ensurePomoNotifyPermission()
+                  updatePomoSettings({ notifyOnDone: ok })
+                }}
+                style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center' }}
+              >
+                <Icon name={d.pomoSettings.notifyOnDone ? 'notifications_active' : 'notifications_off'} size={18} color={C.text} />
+                {d.pomoSettings.notifyOnDone ? 'Aviso al terminar el Pomodoro activado' : 'Avisarme al terminar el Pomodoro (escritorio)'}
+              </button>
+              {typeof Notification !== 'undefined' && Notification.permission === 'denied' ? (
+                <p style={{ margin: '8px 0 0', fontSize: '12px', color: C.danger, fontWeight: 600 }}>
+                  El navegador bloqueó las notificaciones. Actívalas en los permisos del sitio para recibir avisos.
+                </p>
+              ) : null}
+            </div>,
+          )
+        : null}
       {sec(
         'Zona de riesgo',
         <button onClick={() => resetAll()} style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center', color: C.danger, borderColor: C.danger + '55' }}>

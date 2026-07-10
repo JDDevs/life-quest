@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { useStore, pomoRemainingOf, pomoElapsedOf } from '../store'
 import type { Stats } from '../types'
-import { Card, Icon, SectionTitle, StatTile, useC } from '../ui'
+import { dateKey } from '../lib/date'
+import { PomoHistoryModal } from '../components/modals/PomoHistoryModal'
+import { Card, Icon, SectionTitle, StatTile, ghostBtn, useC } from '../ui'
 
 function fmt(sec: number) {
   const m = Math.floor(Math.max(0, sec) / 60)
@@ -8,11 +11,6 @@ function fmt(sec: number) {
   return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
 }
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-function humanDate(key: string) {
-  const [, m, dd] = key.split('-').map(Number)
-  return dd + ' de ' + MONTHS[m - 1] + '.'
-}
 function hhmm(ts: number) {
   const d = new Date(ts)
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
@@ -20,6 +18,7 @@ function hhmm(ts: number) {
 
 export function Pomodoro({ s }: { s: Stats }) {
   const C = useC()
+  const [showHistory, setShowHistory] = useState(false)
   const narrow = useStore((st) => st.narrow)
   const d = useStore((st) => st.data)
   const run = d.pomoRun
@@ -48,11 +47,8 @@ export function Pomodoro({ s }: { s: Stats }) {
   // "Comenzar" vs "Reanudar": mid-run if we're not at the fresh start value
   const midRun = mode === 'pomo' ? remaining < phaseTarget : elapsed > 0
 
-  const byDate: Record<string, typeof d.pomoSessions> = {}
-  d.pomoSessions.forEach((sn) => {
-    ;(byDate[sn.date] = byDate[sn.date] || []).push(sn)
-  })
-  const dates = Object.keys(byDate).sort().reverse()
+  const todayKey = dateKey(new Date())
+  const todaySessions = d.pomoSessions.filter((sn) => sn.date === todayKey)
 
   return (
     <div>
@@ -131,6 +127,27 @@ export function Pomodoro({ s }: { s: Stats }) {
             </button>
           </div>
 
+          <button
+            onClick={() => updateSettings({ tickSound: !settings.tickSound })}
+            title="Sonido de reloj mientras corre el tiempo"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '7px',
+              marginTop: '14px',
+              padding: '8px 15px',
+              borderRadius: '999px',
+              border: '1px solid ' + (settings.tickSound ? C.primary : C.line2),
+              background: settings.tickSound ? C.primarySoft : 'transparent',
+              color: settings.tickSound ? C.primaryD : C.muted,
+              fontWeight: 700,
+              fontSize: '12.5px',
+            }}
+          >
+            <Icon name="av_timer" size={17} color={settings.tickSound ? C.primary : C.faint} />
+            Tic-tac {settings.tickSound ? 'activado' : 'desactivado'}
+          </button>
+
           {mode === 'pomo' ? (
             <div style={{ display: 'flex', gap: '16px', marginTop: '18px', flexWrap: 'wrap', justifyContent: 'center' }}>
               {(
@@ -164,34 +181,34 @@ export function Pomodoro({ s }: { s: Stats }) {
             <StatTile icon="workspace_premium" label="Total pomodoros" val={s.pomosTotal} fg={C.goldText} bg={C.goldSoft} />
             <StatTile icon="schedule" label="Enfoque total" val={Math.floor(s.focusMinTotal / 60) + 'h ' + (s.focusMinTotal % 60) + 'm'} fg={C.blue} bg={C.blueSoft} />
           </div>
-          <SectionTitle title="Registro de enfoque" />
-          {dates.length === 0 ? (
-            <div style={{ color: C.faint, fontWeight: 600, fontSize: '13px', padding: '10px 0' }}>Aún no hay sesiones. ¡Empieza tu primer Pomodoro!</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h2 style={{ margin: 0, fontFamily: '"Space Grotesk"', fontSize: '20px', fontWeight: 700, letterSpacing: '-.3px' }}>Registro de hoy</h2>
+            <button onClick={() => setShowHistory(true)} style={{ ...ghostBtn(C), padding: '8px 13px' }}>
+              <Icon name="history" size={18} color={C.muted} />
+              Historial
+            </button>
+          </div>
+          {todaySessions.length === 0 ? (
+            <div style={{ color: C.faint, fontWeight: 600, fontSize: '13px', padding: '10px 0' }}>Aún no hay sesiones hoy. ¡Empieza tu primer Pomodoro!</div>
           ) : (
-            <div style={{ display: 'grid', gap: '16px' }}>
-              {dates.slice(0, 8).map((date) => (
-                <div key={date}>
-                  <div style={{ fontSize: '12.5px', fontWeight: 800, color: C.muted, marginBottom: '8px' }}>{humanDate(date)}</div>
-                  <div style={{ display: 'grid', gap: '8px' }}>
-                    {byDate[date].map((sn) => (
-                      <div key={sn.id} style={{ display: 'flex', alignItems: 'center', gap: '11px', background: C.card, border: '1px solid ' + C.line, borderRadius: '11px', padding: '10px 13px' }}>
-                        <Icon name={sn.mode === 'pomo' ? 'timer' : 'timelapse'} size={18} color={C.primary} fill />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '12px', color: C.faint, fontWeight: 600 }}>
-                            {hhmm(sn.start)} – {hhmm(sn.end)}
-                          </div>
-                          <div style={{ fontWeight: 700, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sn.taskTitle || 'Enfoque libre'}</div>
-                        </div>
-                        <span style={{ fontFamily: '"Space Grotesk"', fontWeight: 700, fontSize: '13px', color: C.muted }}>{sn.minutes}m</span>
-                      </div>
-                    ))}
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {todaySessions.map((sn) => (
+                <div key={sn.id} style={{ display: 'flex', alignItems: 'center', gap: '11px', background: C.card, border: '1px solid ' + C.line, borderRadius: '11px', padding: '10px 13px' }}>
+                  <Icon name={sn.mode === 'pomo' ? 'timer' : 'timelapse'} size={18} color={C.primary} fill />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '12px', color: C.faint, fontWeight: 600 }}>
+                      {hhmm(sn.start)} – {hhmm(sn.end)}
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sn.taskTitle || 'Enfoque libre'}</div>
                   </div>
+                  <span style={{ fontFamily: '"Space Grotesk"', fontWeight: 700, fontSize: '13px', color: C.muted }}>{sn.minutes}m</span>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+      {showHistory ? <PomoHistoryModal onClose={() => setShowHistory(false)} /> : null}
     </div>
   )
 }

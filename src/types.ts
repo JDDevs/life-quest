@@ -103,6 +103,10 @@ export interface PomoSettings {
   breakMin: number
   longBreakMin: number
   longEvery: number
+  /** Show a desktop notification when a work/break block ends (opt-in). */
+  notifyOnDone: boolean
+  /** Play a soft clock tick-tock every second while the timer runs (opt-in). */
+  tickSound: boolean
 }
 
 export interface PomoSession {
@@ -130,6 +134,10 @@ export interface PomoRun {
    *  (via task switches). Lets us keep the timer running when you change task
    *  while still attributing each segment to the right task. */
   loggedSec: number
+  /** anchorTs of the last block that already fired its completion (log + phase
+   *  switch). Makes `pomoTick` idempotent so a block that hits zero is never
+   *  processed twice — across a background-tab catch-up or across devices. */
+  lastCompletedAnchor: number | null
 }
 
 export interface Reward {

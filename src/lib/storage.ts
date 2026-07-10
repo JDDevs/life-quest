@@ -39,7 +39,7 @@ export function seed(): AppData {
     tasks: [],
     pomoSettings: { ...DEFAULT_POMO_SETTINGS },
     pomoSessions: [],
-    pomoRun: { running: false, mode: 'pomo', phase: 'work', cycle: 0, taskId: null, anchorTs: null, baseSec: DEFAULT_POMO_SETTINGS.workMin * 60, loggedSec: 0 },
+    pomoRun: { running: false, mode: 'pomo', phase: 'work', cycle: 0, taskId: null, anchorTs: null, baseSec: DEFAULT_POMO_SETTINGS.workMin * 60, loggedSec: 0, lastCompletedAnchor: null },
     taskTemplates: [],
     goalTemplates: [],
   }
@@ -67,6 +67,8 @@ export function migrate(input: Partial<AppData>): AppData {
   d.lists = d.lists || DEFAULT_LISTS.map((l) => ({ ...l }))
   d.tasks = d.tasks || []
   d.pomoSettings = d.pomoSettings || { ...DEFAULT_POMO_SETTINGS }
+  if (d.pomoSettings.notifyOnDone === undefined) d.pomoSettings.notifyOnDone = false
+  if (d.pomoSettings.tickSound === undefined) d.pomoSettings.tickSound = false
   d.pomoSessions = d.pomoSessions || []
   d.pomoRun = d.pomoRun || {
     running: false,
@@ -77,8 +79,10 @@ export function migrate(input: Partial<AppData>): AppData {
     anchorTs: null,
     baseSec: (d.pomoSettings.workMin || 25) * 60,
     loggedSec: 0,
+    lastCompletedAnchor: null,
   }
   if (d.pomoRun.loggedSec === undefined) d.pomoRun.loggedSec = 0
+  if (d.pomoRun.lastCompletedAnchor === undefined) d.pomoRun.lastCompletedAnchor = null
   d.taskTemplates = d.taskTemplates || []
   d.goalTemplates = d.goalTemplates || []
   if (!d.currentWeek) {

@@ -205,6 +205,8 @@ export const DEFAULT_POMO_SETTINGS: PomoSettings = {
   breakMin: 5,
   longBreakMin: 15,
   longEvery: 4,
+  notifyOnDone: false,
+  tickSound: false,
 }
 
 export const TASK_PRIORITIES: { id: 'urgent' | 'important' | 'anytime' | 'backlog'; name: string; color: string }[] = [

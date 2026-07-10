@@ -10,6 +10,7 @@ import {
 } from './constants'
 import { cloudEnabled } from './lib/cloud'
 import { celebrate, levelUpFx, playSound } from './fx'
+import { notifyPomoDone } from './lib/notify'
 import { addDays, dateKey, mondayKey, parseKey, todayIdx } from './lib/date'
 import { goalUnits } from './lib/goals'
 import { computeStats } from './lib/stats'
@@ -1285,6 +1286,7 @@ export const useStore = create<StoreState>((set, get) => {
       if (cur.mode === 'pomo' && pomoRemainingOf(cur) <= 0) {
         const s = get().data.pomoSettings
         const now = Date.now()
+        const completedAnchor = cur.anchorTs
         if (cur.phase === 'work') {
           // work block finished → log the un-attributed remainder to the current
           // task (earlier segments were banked on switch), then start a break
@@ -1295,14 +1297,16 @@ export const useStore = create<StoreState>((set, get) => {
           const nextCycle = cur.cycle + 1
           const brk = nextCycle % s.longEvery === 0 ? s.longBreakMin : s.breakMin
           patch((d) => {
-            d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'break', cycle: nextCycle, baseSec: brk * 60, loggedSec: 0 }
+            d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'break', cycle: nextCycle, baseSec: brk * 60, loggedSec: 0, lastCompletedAnchor: completedAnchor }
           })
           playSound('bell', get().data.muted)
+          if (s.notifyOnDone) notifyPomoDone('work')
         } else {
           patch((d) => {
-            d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'work', baseSec: s.workMin * 60, loggedSec: 0 }
+            d.pomoRun = { ...d.pomoRun, running: false, anchorTs: null, phase: 'work', baseSec: s.workMin * 60, loggedSec: 0, lastCompletedAnchor: completedAnchor }
           })
           playSound('bell', get().data.muted)
+          if (s.notifyOnDone) notifyPomoDone('break')
         }
         return
       }
@@ -1325,7 +1329,12 @@ export const useStore = create<StoreState>((set, get) => {
       const r = incoming.pomoRun
       const keepLocal =
         !!localRun && localRun.running && (!r || !r.running || (localRun.anchorTs || 0) > (r.anchorTs || 0))
-      const data = keepLocal ? { ...incoming, pomoRun: localRun } : incoming
+      // …but if the remote already completed the exact block we're still
+      // running, adopt its finished state instead of re-completing (and
+      // re-logging) the same session locally.
+      const remoteFinishedOurBlock =
+        keepLocal && !!r && r.lastCompletedAnchor != null && r.lastCompletedAnchor === localRun.anchorTs
+      const data = keepLocal && !remoteFinishedOurBlock ? { ...incoming, pomoRun: localRun } : incoming
       persist(data)
       set({ data, tick: Date.now() })
     },

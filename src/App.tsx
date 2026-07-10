@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { useStore } from './store'
+import { useStore, pomoRemainingOf, pomoElapsedOf } from './store'
 import { cloudEnabled, pullState, pushState } from './lib/cloud'
+import { playClock } from './fx'
 import { palette } from './theme'
+import { PomoMiniWidget } from './components/PomoMiniWidget'
 import { Header } from './components/Header'
 import { Nav } from './components/Nav'
 import { GoalModal } from './components/modals/GoalModal'
@@ -51,16 +53,38 @@ export default function App() {
     }
   }, [setNarrow])
 
-  // drive the pomodoro/stopwatch timer globally so it keeps running (and can
-  // complete) even when you're on another tab of the app. Only the *visible*
-  // device advances/completes it, to avoid a backgrounded device double-logging
-  // a session (the timer state itself is synced via data.pomoRun).
+  // Drive the pomodoro/stopwatch timer from a Web Worker. Main-thread timers are
+  // heavily throttled (or frozen) in background tabs, so a block could finish
+  // minutes late; the worker keeps ticking, so completion (bell + desktop
+  // notification) fires close to on time even when the tab isn't focused.
+  // pomoTick is idempotent, so a burst of catch-up ticks can't double-log.
+  const lastClockSec = useRef(-1)
   useEffect(() => {
-    const id = setInterval(() => {
-      if (document.visibilityState !== 'visible') return
-      if (useStore.getState().data.pomoRun.running) useStore.getState().pomoTick()
-    }, 500)
-    return () => clearInterval(id)
+    const worker = new Worker(new URL('./lib/pomoWorker.ts', import.meta.url), { type: 'module' })
+    worker.onmessage = () => {
+      const st = useStore.getState()
+      if (!st.data.pomoRun.running) {
+        lastClockSec.current = -1
+        return
+      }
+      st.pomoTick()
+      // Clock tick-tock (opt-in), only while visible — a background tab can't
+      // play audio anyway, and we don't want a burst of ticks on refocus.
+      const after = useStore.getState()
+      const run = after.data.pomoRun
+      if (after.data.pomoSettings.tickSound && run.running && document.visibilityState === 'visible') {
+        const sec = run.mode === 'pomo' ? pomoRemainingOf(run) : pomoElapsedOf(run)
+        if (sec !== lastClockSec.current) {
+          lastClockSec.current = sec
+          playClock(after.data.muted)
+        }
+      }
+    }
+    worker.postMessage('start')
+    return () => {
+      worker.postMessage('stop')
+      worker.terminate()
+    }
   }, [])
 
   // ---- cloud sync ----
@@ -119,9 +143,12 @@ export default function App() {
   // when this device regains focus, sync with the cloud: flush local changes if
   // any, otherwise pull the latest (so switching devices shows fresh data)
   useEffect(() => {
-    if (!cloudEnabled()) return
     const onFocus = async () => {
       if (document.visibilityState === 'hidden') return
+      // Back on the tab: run a catch-up tick so a block that hit zero while the
+      // worker was throttled completes now too (pomoTick is idempotent).
+      if (useStore.getState().data.pomoRun.running) useStore.getState().pomoTick()
+      if (!cloudEnabled()) return
       useStore.getState().setSyncStatus('syncing')
       try {
         if (dirty.current) {
@@ -129,8 +156,11 @@ export default function App() {
           dirty.current = false
         } else {
           const remote = await pullState()
-          if (remote) useStore.getState().replaceData(remote.data)
-          dirty.current = false
+          // Don't clobber a local edit made *during* the pull. Clicking a
+          // background tab fires focus before the click's change handler, so the
+          // toggle can flip `dirty` true while we await here — keep local and let
+          // the debounced push persist it (otherwise the edit visibly reverts).
+          if (remote && !dirty.current) useStore.getState().replaceData(remote.data)
         }
         useStore.getState().setSyncStatus('synced')
       } catch {
@@ -181,6 +211,7 @@ export default function App() {
       <AvatarModal />
       <AssistantModal />
       <TemplatesModal />
+      <PomoMiniWidget />
     </div>
   )
 }

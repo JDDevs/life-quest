@@ -38,6 +38,9 @@ export function playSound(kind: SoundKind, muted: boolean): void {
     const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     if (!AC) return
     ac = ac || new AC()
+    // Browsers suspend the AudioContext in background tabs; resume it so the
+    // completion bell actually plays (e.g. when the tab regains focus).
+    if (ac.state === 'suspended') void ac.resume()
     const now = ac.currentTime
     if (kind === 'bell') {
       playBell(ac, now)
@@ -67,6 +70,34 @@ export function playSound(kind: SoundKind, muted: boolean): void {
       o.start(t)
       o.stop(t + 0.24)
     })
+  } catch {
+    /* ignore */
+  }
+}
+
+// Soft mechanical clock tick, alternating tick/tock pitch each call. Meant to
+// be triggered once per second while the Pomodoro/stopwatch is running.
+let clockToggle = false
+export function playClock(muted: boolean): void {
+  if (muted) return
+  try {
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    if (!AC) return
+    ac = ac || new AC()
+    if (ac.state === 'suspended') void ac.resume()
+    const now = ac.currentTime
+    clockToggle = !clockToggle
+    const o = ac.createOscillator()
+    const g = ac.createGain()
+    o.type = 'triangle'
+    o.frequency.value = clockToggle ? 1060 : 760
+    g.gain.setValueAtTime(0.0001, now)
+    g.gain.exponentialRampToValueAtTime(0.05, now + 0.004)
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.05)
+    o.connect(g)
+    g.connect(ac.destination)
+    o.start(now)
+    o.stop(now + 0.06)
   } catch {
     /* ignore */
   }
