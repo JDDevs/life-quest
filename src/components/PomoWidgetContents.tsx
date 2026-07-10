@@ -7,15 +7,17 @@ function fmt(sec: number) {
   return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
 }
 
-/** Self-contained timer card: the ring, the time and the pause/stop controls.
- *  Reused by the in-app floating pill (expanded state) and by the Document PiP
- *  window (rendered there via createPortal, so store subscriptions still work). */
+/** Self-contained timer card: ring, time and pause/stop controls. Reused by the
+ *  in-app floating pill (expanded) and by the Document PiP window. The `pip`
+ *  variant fills the whole PiP window instead of drawing a floating card. */
 export function PomoWidgetContents({
+  variant = 'panel',
   onGoToPomodoro,
   onPopOut,
   onClose,
   closeIcon = 'close',
 }: {
+  variant?: 'panel' | 'pip'
   onGoToPomodoro?: () => void
   onPopOut?: () => void
   onClose?: () => void
@@ -43,8 +45,13 @@ export function PomoWidgetContents({
   const label = mode === 'stopwatch' ? 'CRONÓMETRO' : phase === 'work' ? 'ENFOQUE' : 'DESCANSO'
   const task = d.tasks.find((t) => t.id === run.taskId)
 
-  const R = 30
+  const pip = variant === 'pip'
+  const ringSize = pip ? 82 : 74
+  const R = pip ? 32 : 29
+  const cx = ringSize / 2
   const CIRC = 2 * Math.PI * R
+  const timeFont = pip ? 19 : 17
+
   const iconBtn = (bg: string, brd: string): React.CSSProperties => ({
     width: '38px',
     height: '38px',
@@ -56,9 +63,22 @@ export function PomoWidgetContents({
     flexShrink: 0,
   })
 
-  return (
-    <div
-      style={{
+  const container: React.CSSProperties = pip
+    ? {
+        background: C.card,
+        borderRadius: 0,
+        padding: '16px 18px',
+        width: '100%',
+        height: '100%',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: '14px',
+        fontFamily: 'Manrope, sans-serif',
+        color: C.text,
+      }
+    : {
         background: C.card,
         border: '1px solid ' + C.line2,
         borderRadius: '18px',
@@ -67,15 +87,17 @@ export function PomoWidgetContents({
         boxShadow: '0 18px 44px rgba(0,0,0,.28)',
         fontFamily: 'Manrope, sans-serif',
         color: C.text,
-      }}
-    >
+      }
+
+  return (
+    <div style={container}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ position: 'relative', width: '76px', height: '76px', flexShrink: 0 }}>
-          <svg width={76} height={76} viewBox="0 0 76 76">
-            <circle cx={38} cy={38} r={R} fill="none" stroke={C.line} strokeWidth={6} />
+        <div style={{ position: 'relative', width: ringSize, height: ringSize, flexShrink: 0 }}>
+          <svg width={ringSize} height={ringSize} viewBox={`0 0 ${ringSize} ${ringSize}`}>
+            <circle cx={cx} cy={cx} r={R} fill="none" stroke={C.line} strokeWidth={6} />
             <circle
-              cx={38}
-              cy={38}
+              cx={cx}
+              cy={cx}
               r={R}
               fill="none"
               stroke={ringColor}
@@ -83,30 +105,17 @@ export function PomoWidgetContents({
               strokeLinecap="round"
               strokeDasharray={CIRC}
               strokeDashoffset={CIRC * (1 - Math.min(1, Math.max(0, progress)))}
-              transform="rotate(-90 38 38)"
+              transform={`rotate(-90 ${cx} ${cx})`}
               style={{ transition: 'stroke-dashoffset .3s linear' }}
             />
           </svg>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'grid',
-              placeItems: 'center',
-              fontFamily: '"Space Grotesk", sans-serif',
-              fontSize: '17px',
-              fontWeight: 700,
-              color: C.text,
-            }}
-          >
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontFamily: '"Space Grotesk", sans-serif', fontSize: timeFont + 'px', fontWeight: 700, color: C.text }}>
             {fmt(displaySec)}
           </div>
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '.6px', color: phase === 'break' ? C.green : C.muted }}>{label}</div>
-          <div style={{ fontWeight: 700, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-            {task ? task.title : 'Enfoque libre'}
-          </div>
+          <div style={{ fontWeight: 700, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{task ? task.title : 'Enfoque libre'}</div>
         </div>
         {onClose ? (
           <button onClick={onClose} title="Cerrar" style={{ color: C.faint, alignSelf: 'flex-start' }}>
@@ -115,7 +124,7 @@ export function PomoWidgetContents({
         ) : null}
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginTop: '12px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '8px', marginTop: pip ? 0 : '12px', alignItems: 'center' }}>
         {!running ? (
           <button
             onClick={pomoStart}
