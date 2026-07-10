@@ -68,11 +68,13 @@ export default function App() {
         return
       }
       st.pomoTick()
-      // Clock tick-tock (opt-in), only while visible — a background tab can't
-      // play audio anyway, and we don't want a burst of ticks on refocus.
+      // Clock tick-tock (opt-in). Keep ticking even when the tab is hidden or
+      // minimized so it doesn't go silent — the running AudioContext keeps the
+      // tab "audible", which also keeps the worker from being throttled. Only
+      // one tick per second-change, so a throttled catch-up can't burst.
       const after = useStore.getState()
       const run = after.data.pomoRun
-      if (after.data.pomoSettings.tickSound && run.running && document.visibilityState === 'visible') {
+      if (after.data.pomoSettings.tickSound && run.running) {
         const sec = run.mode === 'pomo' ? pomoRemainingOf(run) : pomoElapsedOf(run)
         if (sec !== lastClockSec.current) {
           lastClockSec.current = sec

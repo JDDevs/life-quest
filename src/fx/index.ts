@@ -75,9 +75,25 @@ export function playSound(kind: SoundKind, muted: boolean): void {
   }
 }
 
-// Soft mechanical clock tick, alternating tick/tock pitch each call. Meant to
+// Realistic clock tick: a short band-passed noise transient (the mechanical
+// "click"), alternating a brighter tick and a darker tock each call. Meant to
 // be triggered once per second while the Pomodoro/stopwatch is running.
 let clockToggle = false
+let clockBuf: AudioBuffer | null = null
+function clockBuffer(context: AudioContext): AudioBuffer {
+  if (clockBuf) return clockBuf
+  const dur = 0.03
+  const n = Math.max(1, Math.floor(context.sampleRate * dur))
+  const buf = context.createBuffer(1, n, context.sampleRate)
+  const data = buf.getChannelData(0)
+  for (let i = 0; i < n; i++) {
+    // white noise with a very fast decay → a sharp mechanical click
+    const env = Math.pow(1 - i / n, 3)
+    data[i] = (Math.random() * 2 - 1) * env
+  }
+  clockBuf = buf
+  return buf
+}
 export function playClock(muted: boolean): void {
   if (muted) return
   try {
@@ -87,17 +103,20 @@ export function playClock(muted: boolean): void {
     if (ac.state === 'suspended') void ac.resume()
     const now = ac.currentTime
     clockToggle = !clockToggle
-    const o = ac.createOscillator()
+    // band-passed noise burst — the transient click of a clock escapement
+    const src = ac.createBufferSource()
+    src.buffer = clockBuffer(ac)
+    const bp = ac.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = clockToggle ? 2600 : 1850
+    bp.Q.value = 1.1
     const g = ac.createGain()
-    o.type = 'triangle'
-    o.frequency.value = clockToggle ? 1060 : 760
-    g.gain.setValueAtTime(0.0001, now)
-    g.gain.exponentialRampToValueAtTime(0.05, now + 0.004)
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.05)
-    o.connect(g)
+    g.gain.value = clockToggle ? 0.6 : 0.48
+    src.connect(bp)
+    bp.connect(g)
     g.connect(ac.destination)
-    o.start(now)
-    o.stop(now + 0.06)
+    src.start(now)
+    src.stop(now + 0.05)
   } catch {
     /* ignore */
   }

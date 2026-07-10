@@ -63,7 +63,7 @@ export function PomoMiniWidget() {
     return createPortal(<PomoWidgetContents onClose={closePip} closeIcon="close_fullscreen" />, pipWin.document.body)
   }
 
-  if (!active || view === 'pomodoro') return null
+  if (!active) return null
 
   const expanded = hover || pinned
   const phase = run.phase
@@ -83,10 +83,14 @@ export function PomoMiniWidget() {
     >
       {expanded ? (
         <PomoWidgetContents
-          onGoToPomodoro={() => {
-            setPinned(false)
-            setView('pomodoro')
-          }}
+          onGoToPomodoro={
+            view === 'pomodoro'
+              ? undefined
+              : () => {
+                  setPinned(false)
+                  setView('pomodoro')
+                }
+          }
           onPopOut={isPipSupported() ? openPip : undefined}
           onClose={() => {
             setPinned(false)
