@@ -3,6 +3,7 @@ import { useStore, pomoRemainingOf, pomoElapsedOf } from '../store'
 import type { Stats } from '../types'
 import { dateKey } from '../lib/date'
 import { PomoHistoryModal } from '../components/modals/PomoHistoryModal'
+import { PomoPopoutButton } from '../components/PomoPopoutButton'
 import { Card, Icon, SectionTitle, StatTile, ghostBtn, useC } from '../ui'
 
 function fmt(sec: number) {
@@ -125,6 +126,7 @@ export function Pomodoro({ s }: { s: Stats }) {
             <button onClick={pomoReset} title="Reiniciar" style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid ' + C.line2, color: C.muted, display: 'grid', placeItems: 'center' }}>
               <Icon name="restart_alt" size={22} color={C.muted} />
             </button>
+            <PomoPopoutButton />
           </div>
 
           <button

@@ -1,6 +1,6 @@
 {
   "name": "life-quest",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "private": true,
   "description": "Life Quest — sistema de crecimiento personal gamificado (RPG-tamagotchi)",
   "type": "module",
@@ -10,13 +10,19 @@
     "prebuild": "node scripts/copy-engine.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "tauri": "tauri",
+    "publish:update": "node scripts/publish-update.mjs",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@neondatabase/serverless": "^1.1.0",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
     "aws4fetch": "^1.0.20",
     "chess.js": "^1.4.0",
     "react": "^18.3.1",
@@ -28,6 +34,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

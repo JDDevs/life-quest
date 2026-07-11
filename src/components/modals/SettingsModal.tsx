@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from '../../store'
 import { cloudEnabled, pullState, pushState } from '../../lib/cloud'
 import { Icon, Overlay, ghostBtn, primaryBtn, useC } from '../../ui'
 import { ensurePomoNotifyPermission, notifySupported } from '../../lib/notify'
+import { isTauri } from '../../lib/tauri'
 
 const SYNC_LABEL: Record<string, string> = {
   disabled: 'No configurada',
@@ -26,6 +27,12 @@ export function SettingsModal() {
   const syncStatus = useStore((s) => s.syncStatus)
   const setSyncStatus = useStore((s) => s.setSyncStatus)
   const replaceData = useStore((s) => s.replaceData)
+  const [updState, setUpdState] = useState<'idle' | 'checking' | 'downloading' | 'none' | 'error'>('idle')
+  const [appVersion, setAppVersion] = useState('')
+  useEffect(() => {
+    if (!isTauri()) return
+    void import('@tauri-apps/api/app').then(({ getVersion }) => getVersion().then(setAppVersion).catch(() => {}))
+  }, [])
   if (!open) return null
 
   const cloudOn = cloudEnabled()
@@ -47,6 +54,24 @@ export function SettingsModal() {
       setSyncStatus('synced')
     } catch {
       setSyncStatus('offline')
+    }
+  }
+  // Desktop-only: check the R2 update feed, then download+install and relaunch.
+  const checkUpdate = async () => {
+    setUpdState('checking')
+    try {
+      const { check } = await import('@tauri-apps/plugin-updater')
+      const update = await check()
+      if (!update) {
+        setUpdState('none')
+        return
+      }
+      setUpdState('downloading')
+      await update.downloadAndInstall()
+      const { relaunch } = await import('@tauri-apps/plugin-process')
+      await relaunch()
+    } catch {
+      setUpdState('error')
     }
   }
 
@@ -188,6 +213,24 @@ export function SettingsModal() {
                   El navegador bloqueó las notificaciones. Actívalas en los permisos del sitio para recibir avisos.
                 </p>
               ) : null}
+            </div>,
+          )
+        : null}
+      {isTauri()
+        ? sec(
+            'Actualizaciones',
+            <div>
+              <button
+                onClick={checkUpdate}
+                disabled={updState === 'checking' || updState === 'downloading'}
+                style={{ ...ghostBtn(C), width: '100%', justifyContent: 'center', opacity: updState === 'checking' || updState === 'downloading' ? 0.6 : 1 }}
+              >
+                <Icon name="system_update" size={18} color={C.text} />
+                {updState === 'checking' ? 'Buscando…' : updState === 'downloading' ? 'Descargando e instalando…' : 'Buscar actualización'}
+              </button>
+              {updState === 'none' ? <p style={{ margin: '8px 0 0', fontSize: '12.5px', color: C.muted, fontWeight: 600 }}>Ya tienes la última versión.</p> : null}
+              {updState === 'error' ? <p style={{ margin: '8px 0 0', fontSize: '12.5px', color: C.danger, fontWeight: 600 }}>No se pudo buscar la actualización. Revisa tu conexión.</p> : null}
+              {appVersion ? <p style={{ margin: '8px 0 0', fontSize: '11.5px', color: C.faint, fontWeight: 600 }}>Versión actual: {appVersion}</p> : null}
             </div>,
           )
         : null}

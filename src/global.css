@@ -138,6 +138,16 @@ textarea {
     transform: translateY(-7px);
   }
 }
+@keyframes widgetopen {
+  from {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
 
 /* Rendered Markdown (task descriptions). Backgrounds use neutral rgba so they
    read well in both light and dark themes; text color is inherited. */

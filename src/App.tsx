@@ -4,6 +4,8 @@ import { cloudEnabled, pullState, pushState } from './lib/cloud'
 import { playClock } from './fx'
 import { palette } from './theme'
 import { PomoMiniWidget } from './components/PomoMiniWidget'
+import { isTauri } from './lib/tauri'
+import { emit, listen } from '@tauri-apps/api/event'
 import { Header } from './components/Header'
 import { Nav } from './components/Nav'
 import { GoalModal } from './components/modals/GoalModal'
@@ -86,6 +88,43 @@ export default function App() {
     return () => {
       worker.postMessage('stop')
       worker.terminate()
+    }
+  }, [])
+
+  // Tauri desktop: bridge timer state to the floating widget window, and apply
+  // its start/pause/stop commands. The main window stays the single source of
+  // truth (worker, cloud sync, notifications all live here, not in the widget).
+  useEffect(() => {
+    if (!isTauri()) return
+    const push = () => {
+      const dd = useStore.getState().data
+      const task = dd.tasks.find((t) => t.id === dd.pomoRun.taskId)
+      void emit('pomo:state', {
+        pomoRun: dd.pomoRun,
+        pomoSettings: dd.pomoSettings,
+        taskTitle: task ? task.title : null,
+        tasks: dd.tasks.filter((t) => !t.done).map((t) => ({ id: t.id, title: t.title })),
+        theme: dd.theme,
+      })
+    }
+    push()
+    const unsub = useStore.subscribe((s, p) => {
+      if (s.data !== p.data) push()
+    })
+    const unlisteners: Array<() => void> = []
+    listen('pomo:req', () => push()).then((u) => unlisteners.push(u))
+    listen('pomo:cmd', (e) => {
+      const p = e.payload as { action?: string; taskId?: string | null } | null
+      const action = p?.action
+      const st = useStore.getState()
+      if (action === 'start') st.pomoStart()
+      else if (action === 'pause') st.pomoPause()
+      else if (action === 'stop') st.pomoStopLog()
+      else if (action === 'setTask') st.setPomoTask(p?.taskId ?? null)
+    }).then((u) => unlisteners.push(u))
+    return () => {
+      unsub()
+      unlisteners.forEach((u) => u())
     }
   }, [])
 
