@@ -4,17 +4,13 @@ import type { Stats } from '../types'
 import { dateKey } from '../lib/date'
 import { PomoHistoryModal } from '../components/modals/PomoHistoryModal'
 import { PomoPopoutButton } from '../components/PomoPopoutButton'
+import { PomoSessionRow } from '../components/PomoSessionRow'
 import { Card, Icon, SectionTitle, StatTile, ghostBtn, useC } from '../ui'
 
 function fmt(sec: number) {
   const m = Math.floor(Math.max(0, sec) / 60)
   const s = Math.max(0, sec) % 60
   return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
-}
-
-function hhmm(ts: number) {
-  const d = new Date(ts)
-  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
 }
 
 export function Pomodoro({ s }: { s: Stats }) {
@@ -195,16 +191,7 @@ export function Pomodoro({ s }: { s: Stats }) {
           ) : (
             <div style={{ display: 'grid', gap: '8px' }}>
               {todaySessions.map((sn) => (
-                <div key={sn.id} style={{ display: 'flex', alignItems: 'center', gap: '11px', background: C.card, border: '1px solid ' + C.line, borderRadius: '11px', padding: '10px 13px' }}>
-                  <Icon name={sn.mode === 'pomo' ? 'timer' : 'timelapse'} size={18} color={C.primary} fill />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '12px', color: C.faint, fontWeight: 600 }}>
-                      {hhmm(sn.start)} – {hhmm(sn.end)}
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sn.taskTitle || 'Enfoque libre'}</div>
-                  </div>
-                  <span style={{ fontFamily: '"Space Grotesk"', fontWeight: 700, fontSize: '13px', color: C.muted }}>{sn.minutes}m</span>
-                </div>
+                <PomoSessionRow key={sn.id} sn={sn} bg={C.card} />
               ))}
             </div>
           )}

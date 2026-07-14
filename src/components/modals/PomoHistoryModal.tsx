@@ -1,14 +1,11 @@
 import { useStore } from '../../store'
 import { Icon, Overlay, useC } from '../../ui'
+import { PomoSessionRow } from '../PomoSessionRow'
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 function humanDate(key: string) {
   const [, m, dd] = key.split('-').map(Number)
   return dd + ' de ' + MONTHS[m - 1] + '.'
-}
-function hhmm(ts: number) {
-  const d = new Date(ts)
-  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
 }
 
 /** Full focus history across every day. The Pomodoro view shows only today; this
@@ -40,16 +37,7 @@ export function PomoHistoryModal({ onClose }: { onClose: () => void }) {
               <div style={{ fontSize: '12.5px', fontWeight: 800, color: C.muted, marginBottom: '8px' }}>{humanDate(date)}</div>
               <div style={{ display: 'grid', gap: '8px' }}>
                 {byDate[date].map((sn) => (
-                  <div key={sn.id} style={{ display: 'flex', alignItems: 'center', gap: '11px', background: C.card2, border: '1px solid ' + C.line, borderRadius: '11px', padding: '10px 13px' }}>
-                    <Icon name={sn.mode === 'pomo' ? 'timer' : 'timelapse'} size={18} color={C.primary} fill />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', color: C.faint, fontWeight: 600 }}>
-                        {hhmm(sn.start)} – {hhmm(sn.end)}
-                      </div>
-                      <div style={{ fontWeight: 700, fontSize: '13.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sn.taskTitle || 'Enfoque libre'}</div>
-                    </div>
-                    <span style={{ fontFamily: '"Space Grotesk"', fontWeight: 700, fontSize: '13px', color: C.muted }}>{sn.minutes}m</span>
-                  </div>
+                  <PomoSessionRow key={sn.id} sn={sn} bg={C.card2} />
                 ))}
               </div>
             </div>

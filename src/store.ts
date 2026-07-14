@@ -278,6 +278,7 @@ interface StoreState {
   setPomoMode: (m: 'pomo' | 'stopwatch') => void
   updatePomoSettings: (patch: Partial<AppData['pomoSettings']>) => void
   logPomoSession: (args: { minutes: number; mode: 'pomo' | 'stopwatch'; taskId: string | null; start: number; end: number }) => void
+  reassignPomoSession: (sessionId: string, taskId: string | null) => void
   // timer controls (state persisted across tab switches & reloads)
   pomoStart: () => void
   pomoPause: () => void
@@ -1244,6 +1245,27 @@ export const useStore = create<StoreState>((set, get) => {
         }
       })
     },
+    reassignPomoSession: (sessionId, taskId) =>
+      patch((data) => {
+        const sn = data.pomoSessions.find((x) => x.id === sessionId)
+        if (!sn) return
+        const newId = taskId || null
+        if (sn.taskId === newId) return
+        // Reverse the aggregates from the previously-attributed task…
+        const prev = sn.taskId ? data.tasks.find((t) => t.id === sn.taskId) : null
+        if (prev) {
+          prev.focusMinutes = Math.max(0, prev.focusMinutes - sn.minutes)
+          if (sn.mode === 'pomo') prev.spentPomos = Math.max(0, prev.spentPomos - 1)
+        }
+        // …and apply them to the new one (mirror of logPomoSession).
+        const next = newId ? data.tasks.find((t) => t.id === newId) : null
+        if (next) {
+          next.focusMinutes += sn.minutes
+          if (sn.mode === 'pomo') next.spentPomos += 1
+        }
+        sn.taskId = newId
+        sn.taskTitle = next ? next.title : ''
+      }),
 
     // ---------- pomodoro timer (lives in `data`, so it syncs across devices) ----------
     pomoStart: () =>
