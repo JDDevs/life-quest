@@ -53,6 +53,10 @@ export function migrate(input: Partial<AppData>): AppData {
   d.potions = d.potions || DEFAULT_POTIONS.map((p) => ({ ...p }))
   d.badHabits = d.badHabits || DEFAULT_BADHABITS.map((b) => ({ ...b }))
   d.habitLog = d.habitLog || []
+  // Anchor the "días sin caer" streak for habits created before it existed.
+  d.badHabits.forEach((b) => {
+    if (!b.startedAt) b.startedAt = d.createdAt || dateKey(new Date())
+  })
   if (d.hp === undefined) d.hp = null
   d.claims = d.claims || []
   d.chessPlan = d.chessPlan || CHESS_PLAN.slice()

@@ -5,8 +5,10 @@ import { CSS } from '@dnd-kit/utilities'
 import { AREAS, type Area } from '../constants'
 import { weekLabel } from '../lib/date'
 import { goalUnits } from '../lib/goals'
+import { goalStreak, habitCleanStreak } from '../lib/streaks'
 import { useStore, type GoalForm } from '../store'
 import type { Goal, Stats } from '../types'
+import { StreakChip } from '../components/StreakChip'
 import { WeekReminder } from '../components/WeekReminder'
 import { Card, ContextMenu, Icon, SectionTitle, ghostBtn, primaryBtn, stepBtn, useC, type CtxItem } from '../ui'
 
@@ -356,6 +358,8 @@ function GoalRow({ g, a, handle, onMenu }: { g: Goal; a: Area; handle?: ReactNod
   const openGoalForm = useStore((st) => st.openGoalForm)
   const setView = useStore((st) => st.setView)
   const tasks = useStore((st) => st.data.tasks)
+  const data = useStore((st) => st.data)
+  const stk = goalStreak(data, g)
   const u = goalUnits(g)
   const done = u.complete
   const main = g.priority === 'main'
@@ -396,6 +400,16 @@ function GoalRow({ g, a, handle, onMenu }: { g: Goal; a: Area; handle?: ReactNod
                 Completada
               </span>
             ) : null}
+            <StreakChip
+              streak={stk.streak}
+              best={stk.best}
+              unitLabel={stk.unit === 'week' ? 'sem' : 'd'}
+              title={
+                stk.streak > 0
+                  ? `Racha: ${stk.streak} ${stk.unit === 'week' ? 'semanas' : 'días'} seguidas · récord ${stk.best}`
+                  : `Racha congelada · récord ${stk.best} ${stk.unit === 'week' ? 'semanas' : 'días'}`
+              }
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: C.muted, fontWeight: 600 }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: C.primaryD }}>
@@ -675,6 +689,7 @@ function BadHabits() {
         <div style={{ display: 'grid', gridTemplateColumns: narrow ? '1fr' : 'repeat(auto-fill,minmax(280px,1fr))', gap: '10px' }}>
           {habits.map((b) => {
             const cnt = habitCountWeek(b.id)
+            const clean = habitCleanStreak(d, b)
             return (
               <div key={b.id} style={{ background: C.card, border: '1px solid ' + C.line, borderRadius: '14px', padding: '13px 15px', display: 'flex', alignItems: 'center', gap: '11px' }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: C.dangerSoft, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
@@ -692,6 +707,18 @@ function BadHabits() {
                     ) : (
                       <span style={{ color: C.green }}>limpio esta semana</span>
                     )}
+                  </div>
+                  <div style={{ marginTop: '5px' }}>
+                    <StreakChip
+                      streak={clean.streak}
+                      best={clean.best}
+                      unitLabel="d"
+                      title={
+                        clean.streak > 0
+                          ? `${clean.streak} ${clean.streak === 1 ? 'día' : 'días'} sin caer · récord ${clean.best}`
+                          : `Caíste hoy · récord ${clean.best} ${clean.best === 1 ? 'día' : 'días'} sin caer`
+                      }
+                    />
                   </div>
                 </div>
                 <button onClick={() => openHabitForm(b)} style={{ color: C.faint, width: '28px', height: '28px', display: 'grid', placeItems: 'center' }}>

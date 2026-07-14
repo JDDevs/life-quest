@@ -511,8 +511,12 @@ export const useStore = create<StoreState>((set, get) => {
           g.counts = old.counts
           g.done = old.done
           g.log = old.log
+          g.seriesId = old.seriesId // keep the streak identity across edits
           arr[i] = g
-        } else arr.push(g)
+        } else {
+          g.seriesId = 's' + Date.now() + Math.random().toString(36).slice(2, 6)
+          arr.push(g)
+        }
         // ensure the progress field for this type exists
         if (g.type === 'daily' && !g.checks) g.checks = Array(7).fill(false)
         if (g.type === 'count' && g.count == null) g.count = 0
@@ -672,8 +676,12 @@ export const useStore = create<StoreState>((set, get) => {
         }
         if (f.id) {
           const i = data.badHabits.findIndex((x) => x.id === f.id)
+          rec.startedAt = data.badHabits[i].startedAt // keep the clean-streak anchor
           data.badHabits[i] = rec
-        } else data.badHabits.push(rec)
+        } else {
+          rec.startedAt = dateKey(new Date())
+          data.badHabits.push(rec)
+        }
       })
       set({ habitForm: null })
     },

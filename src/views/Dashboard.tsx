@@ -1,9 +1,11 @@
 import { AREAS } from '../constants'
 import { todayIdx, parseKey } from '../lib/date'
 import { goalUnits } from '../lib/goals'
+import { activeGoalStreaks, activeHabitStreaks } from '../lib/streaks'
 import { useStore } from '../store'
 import type { Stats } from '../types'
 import { Avatar } from '../components/Avatar'
+import { StreakChip } from '../components/StreakChip'
 import { WeekReminder } from '../components/WeekReminder'
 import { Card, Icon, SectionTitle, StatTile, inp, useC } from '../ui'
 
@@ -44,6 +46,8 @@ export function Dashboard({ s }: { s: Stats }) {
           </div>
         </div>
       ) : null}
+
+      <StreaksCard />
 
       <div style={{ display: 'grid', gridTemplateColumns: col2(narrow, '1.35fr 1fr'), gap: '18px' }}>
         <FocusCard />
@@ -97,6 +101,45 @@ export function Dashboard({ s }: { s: Stats }) {
         <WeekChart s={s} />
       </Card>
     </div>
+  )
+}
+
+function StreaksCard() {
+  const C = useC()
+  const data = useStore((st) => st.data)
+  const goals = activeGoalStreaks(data)
+  const habits = activeHabitStreaks(data)
+  if (!goals.length && !habits.length) return null
+  return (
+    <Card>
+      <SectionTitle title="Rachas activas" sub="Constancia acumulada — no la rompas" />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '9px' }}>
+        {goals.map(({ goal, streak, best, unit }) => {
+          const a = AREAS.find((x) => x.id === goal.areaId)
+          const color = a?.color || C.primary
+          return (
+            <div
+              key={goal.id}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '12px', background: C.card2, border: '1px solid ' + C.line }}
+            >
+              <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ fontSize: '13px', fontWeight: 700, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.title}</span>
+              <StreakChip streak={streak} best={best} unitLabel={unit === 'week' ? 'sem' : 'd'} title={`Racha: ${streak} ${unit === 'week' ? 'semanas' : 'días'} · récord ${best}`} />
+            </div>
+          )
+        })}
+        {habits.map(({ habit, streak, best }) => (
+          <div
+            key={habit.id}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 12px', borderRadius: '12px', background: C.card2, border: '1px solid ' + C.line }}
+          >
+            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: C.danger, flexShrink: 0 }} />
+            <span style={{ fontSize: '13px', fontWeight: 700, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
+            <StreakChip streak={streak} best={best} unitLabel="d" title={`${streak} días sin caer · récord ${best}`} />
+          </div>
+        ))}
+      </div>
+    </Card>
   )
 }
 

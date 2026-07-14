@@ -27,6 +27,10 @@ export interface Goal {
   /** Timestamps (ms) of each progress increase — a day checked, a `+`, a rep,
    *  or a weekly goal completed. Popped when the action is undone. */
   log?: number[]
+  /** Stable id shared across every weekly copy of this goal, so its streak
+   *  survives the weekly reset (which assigns a fresh `id`). Older goals without
+   *  it fall back to matching by normalized title. */
+  seriesId?: string
 }
 
 // ---------- Tareas / Pomodoro (TickTick-style) ----------
@@ -161,6 +165,9 @@ export interface BadHabit {
   name: string
   damage: number
   icon: string
+  /** Date key (YYYY-MM-DD) the habit started being tracked. Anchors the
+   *  "días sin caer" streak when there are no relapses yet. */
+  startedAt?: string
 }
 
 export interface HabitLogEntry {
